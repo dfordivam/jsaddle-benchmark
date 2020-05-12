@@ -21,18 +21,38 @@ data TestData = TestData
   , _testData_strVar :: !JSVal
   , _testData_objVar :: !JSVal
   }
+type BMResults = [(Text, NominalDiffTime)]
 
 runBMs :: JSM ()
 runBMs = do
   !testData <- makeTestData
   results <- runReaderT (runTestAndGatherResult 1000) testData
-  liftIO $ traverse_ print results
+  putResultsInDom results
+  liftIO $ for_ results $ \(desc, t) -> do
+    putStrLn $ (T.unpack desc) <> "\t\t" <> show t
   -- results <- runReaderT (measureElapsedTime 1000 doSetPropNumber) testData
   -- b <- valToBool =<< (_testData_objVar testData) ^. js ("boolean_val" :: JSString)
   -- liftIO $ print b
   -- liftIO $ print results
 
-runTestAndGatherResult :: Int -> TestM [(Text, NominalDiffTime)]
+putResultsInDom :: BMResults -> JSM ()
+putResultsInDom results = do
+  let
+    innerHTML :: Text
+    innerHTML = table $ ([ rowHeader ] <>) $
+      (flip map) results $ \(desc, t) -> row [td desc, td (T.pack $ show t)]
+    table :: [Text] -> Text
+    table c = "<table>" <> mconcat c <> "</table>"
+    row :: [Text] -> Text
+    row c = "<tr>" <> mconcat c <> "</tr>"
+    td :: Text -> Text
+    td c = "<td>" <> c <> "</td>"
+    rowHeader :: Text
+    rowHeader = "<th>Description</th><th>time (in sec)</th>"
+  doc <- jsg ("document" :: JSString)
+  doc ^. js ("body" :: JSString) ^. jss ("innerHTML" :: JSString) innerHTML
+
+runTestAndGatherResult :: Int -> TestM BMResults
 runTestAndGatherResult c = do
   for allTests $ \(test, description) -> do
     (description,) <$> measureElapsedTime c test
