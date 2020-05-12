@@ -28,8 +28,10 @@ runBMs = do
 
 runTestAndGatherResult :: Int -> TestM [(Text, NominalDiffTime)]
 runTestAndGatherResult c = do
-  for valToTests $ \(test, description) -> do
+  for allTests $ \(test, description) -> do
     (description,) <$> measureElapsedTime c test
+  where
+    allTests = valToTests <> toJSValTests
 
 measureElapsedTime :: (MonadJSM m) => Int -> m a -> m (NominalDiffTime)
 measureElapsedTime c f = do
@@ -40,12 +42,20 @@ measureElapsedTime c f = do
 
 valToTests :: [(TestM (), Text)]
 valToTests =
-  [ (doValToBool , "valToBool")
+  [ (doValToBool, "valToBool")
   , (doValToNumber, "valToNumber")
   , (doValToStr, "valToStr")
   , (doValToText, "valToText")
   , (doValToObject, "valToObject")
   , (doValToJSON, "valToJSON")
+  ]
+
+toJSValTests :: [(TestM (), Text)]
+toJSValTests =
+  [ (doToJSValBool, "toJSVal Bool")
+  , (doToJSValNumber, "toJSVal Double")
+  , (doToJSValString, "toJSVal String")
+  , (doToJSValText, "toJSVal Text")
   ]
 
 makeTestData :: JSM TestData
@@ -89,4 +99,24 @@ doValToObject = do
 doValToJSON :: TestM ()
 doValToJSON = do
   !res <- lift . valToJSON =<< asks _testData_objVar
+  pure ()
+
+doToJSValBool :: TestM ()
+doToJSValBool = do
+  !res <- lift $ valToBool =<< toJSVal True
+  pure ()
+
+doToJSValNumber :: TestM ()
+doToJSValNumber = do
+  !res <- lift $ valToNumber =<< toJSVal (3.56 :: Double)
+  pure ()
+
+doToJSValString :: TestM ()
+doToJSValString = do
+  !res <- lift $ valToStr =<< toJSVal ("a string" :: String)
+  pure ()
+
+doToJSValText :: TestM ()
+doToJSValText = do
+  !res <- lift $ valToStr =<< toJSVal ("a text string" :: Text)
   pure ()
