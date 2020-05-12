@@ -31,7 +31,10 @@ runTestAndGatherResult c = do
   for allTests $ \(test, description) -> do
     (description,) <$> measureElapsedTime c test
   where
-    allTests = valToTests <> toJSValTests
+    allTests = valToTests
+      <> toJSValTests
+      <> makeObjectTests
+      <> makeArrayTests
 
 measureElapsedTime :: (MonadJSM m) => Int -> m a -> m (NominalDiffTime)
 measureElapsedTime c f = do
@@ -56,6 +59,18 @@ toJSValTests =
   , (doToJSValNumber, "toJSVal Double")
   , (doToJSValString, "toJSVal String")
   , (doToJSValText, "toJSVal Text")
+  ]
+
+makeObjectTests =
+  [ (doMakeObject, "makeObject")
+  , (doMakeObjectAndGetProp, "makeObject + getProp")
+  , (doMakeObjectAndToJSON, "makeObject + valToJSON")
+  ]
+
+makeArrayTests =
+  [ (doMakeArray, "array")
+  , (doMakeArrayAndPropertyNames, "array + propertyNames")
+  , (doMakeArrayAndProperties, "array + properties")
   ]
 
 makeTestData :: JSM TestData
@@ -119,4 +134,61 @@ doToJSValString = do
 doToJSValText :: TestM ()
 doToJSValText = do
   !res <- lift $ valToStr =<< toJSVal ("a text string" :: Text)
+  pure ()
+
+doMakeObject :: TestM ()
+doMakeObject = do
+  b <- asks _testData_boolVar
+  n <- asks _testData_numberVar
+  s <- asks _testData_strVar
+  !res <- lift $ do
+    o <- create
+    (o <# ("boolean_val" :: String)) b
+    (o <# ("number_val" :: String)) n
+    (o <# ("string_val" :: String)) s
+    toJSVal o
+  pure ()
+
+doMakeObjectAndGetProp :: TestM ()
+doMakeObjectAndGetProp = do
+  b <- asks _testData_boolVar
+  n <- asks _testData_numberVar
+  s <- asks _testData_strVar
+  !res <- lift $ do
+    o <- create
+    (o <# ("boolean_val" :: String)) b
+    (o <# ("number_val" :: String)) n
+    (o <# ("string_val" :: String)) s
+    getProp "boolean_val" o
+  pure ()
+
+doMakeObjectAndToJSON :: TestM ()
+doMakeObjectAndToJSON = do
+  b <- asks _testData_boolVar
+  n <- asks _testData_numberVar
+  s <- asks _testData_strVar
+  !res <- lift $ do
+    o <- create
+    (o <# ("boolean_val" :: String)) b
+    (o <# ("number_val" :: String)) n
+    (o <# ("string_val" :: String)) s
+    valToJSON =<< toJSVal o
+  pure ()
+
+doMakeArray :: TestM ()
+doMakeArray = do
+  !res <- lift $ do
+    array ("Hello" :: Text, JSNull, (), True, 1.0::Double)
+  pure ()
+
+doMakeArrayAndPropertyNames :: TestM ()
+doMakeArrayAndPropertyNames = do
+  !res <- lift $ do
+    propertyNames =<< array ("Hello" :: Text, JSNull, (), True, 1.0::Double)
+  pure ()
+
+doMakeArrayAndProperties :: TestM ()
+doMakeArrayAndProperties = do
+  !res <- lift $ do
+    properties =<< array ("Hello" :: Text, JSNull, (), True, 1.0::Double)
   pure ()
