@@ -1,9 +1,14 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Language.Javascript.JSaddle.Benchmark where
 
 import Control.Monad.Reader
+import Data.Foldable
+import Data.Text (Text)
 import Data.Time
+import Data.Traversable
 import Language.Javascript.JSaddle
 
 type TestM = ReaderT TestData JSM
@@ -18,7 +23,30 @@ data TestData = TestData
 runBMs :: JSM ()
 runBMs = do
   !testData <- makeTestData
-  runReaderT (measureElapsedTime 1000 (sequence valToTests)) testData
+  results <- runReaderT (runTestAndGatherResult 1000) testData
+  liftIO $ traverse_ print results
+
+runTestAndGatherResult :: Int -> TestM [(Text, NominalDiffTime)]
+runTestAndGatherResult c = do
+  for valToTests $ \(test, description) -> do
+    (description,) <$> measureElapsedTime c test
+
+measureElapsedTime :: (MonadJSM m) => Int -> m a -> m (NominalDiffTime)
+measureElapsedTime c f = do
+  startTime <- liftIO $ getCurrentTime
+  replicateM_ c f
+  endTime <- liftIO $ getCurrentTime
+  pure $ diffUTCTime endTime startTime
+
+valToTests :: [(TestM (), Text)]
+valToTests =
+  [ (doValToBool , "valToBool")
+  , (doValToNumber, "valToNumber")
+  , (doValToStr, "valToStr")
+  , (doValToText, "valToText")
+  , (doValToObject, "valToObject")
+  , (doValToJSON, "valToJSON")
+  ]
 
 makeTestData :: JSM TestData
 makeTestData = do
@@ -27,28 +55,11 @@ makeTestData = do
   !s <- toJSVal ("example string" :: String)
   !o <- do
     o <- create
-    (o <# "boolean_val") b
-    (o <# "number_val") n
-    (o <# "string_val") s
+    (o <# ("boolean_val" :: String)) b
+    (o <# ("number_val" :: String)) n
+    (o <# ("string_val" :: String)) s
     toJSVal o
   pure $ TestData b n s o
-
-measureElapsedTime :: (MonadJSM m) => Int -> m a -> m ()
-measureElapsedTime c f = do
-  startTime <- liftIO $ getCurrentTime
-  replicateM_ c f
-  endTime <- liftIO $ getCurrentTime
-  liftIO $ print $ diffUTCTime endTime startTime
-
-valToTests :: [TestM ()]
-valToTests =
-  [ doValToBool
-  , doValToNumber
-  , doValToStr
-  , doValToText
-  , doValToObject
-  , doValToJSON
-  ]
 
 doValToBool :: TestM ()
 doValToBool = do

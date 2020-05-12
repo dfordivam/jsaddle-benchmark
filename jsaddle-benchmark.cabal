@@ -21,6 +21,7 @@ library
   build-depends:       base >=4.9 && <5,
                        jsaddle,
                        mtl,
+                       text,
                        time
   exposed-modules:
      Language.Javascript.JSaddle.Benchmark
