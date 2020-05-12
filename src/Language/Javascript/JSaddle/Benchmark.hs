@@ -4,9 +4,11 @@
 
 module Language.Javascript.JSaddle.Benchmark where
 
+import Control.Lens
 import Control.Monad.Reader
 import Data.Foldable
 import Data.Text (Text)
+import qualified Data.Text as T
 import Data.Time
 import Data.Traversable
 import Language.Javascript.JSaddle
@@ -25,6 +27,10 @@ runBMs = do
   !testData <- makeTestData
   results <- runReaderT (runTestAndGatherResult 1000) testData
   liftIO $ traverse_ print results
+  -- results <- runReaderT (measureElapsedTime 1000 doSetPropNumber) testData
+  -- b <- valToBool =<< (_testData_objVar testData) ^. js ("boolean_val" :: JSString)
+  -- liftIO $ print b
+  -- liftIO $ print results
 
 runTestAndGatherResult :: Int -> TestM [(Text, NominalDiffTime)]
 runTestAndGatherResult c = do
@@ -35,6 +41,8 @@ runTestAndGatherResult c = do
       <> toJSValTests
       <> makeObjectTests
       <> makeArrayTests
+      <> getSetProp
+      <> apiCallTests
 
 measureElapsedTime :: (MonadJSM m) => Int -> m a -> m (NominalDiffTime)
 measureElapsedTime c f = do
@@ -71,6 +79,22 @@ makeArrayTests =
   [ (doMakeArray, "array")
   , (doMakeArrayAndPropertyNames, "array + propertyNames")
   , (doMakeArrayAndProperties, "array + properties")
+  ]
+
+getSetProp =
+  [ (doGetPropBool, "getProp bool")
+  , (doGetPropNumber, "getProp number")
+  , (doGetPropText, "getProp text")
+  , (doSetPropBool, "setProp bool")
+  , (doSetPropNumber, "setProp number")
+  , (doSetPropText, "setProp text")
+  , (doGetSetPropBool, "getProp + setProp bool")
+  , (doGetSetPropNumber, "getProp + setProp number")
+  , (doGetSetPropText, "getProp + setProp text")
+  ]
+
+apiCallTests =
+  [ (doApiCallLength, "call string length")
   ]
 
 makeTestData :: JSM TestData
@@ -191,4 +215,70 @@ doMakeArrayAndProperties :: TestM ()
 doMakeArrayAndProperties = do
   !res <- lift $ do
     properties =<< array ("Hello" :: Text, JSNull, (), True, 1.0::Double)
+  pure ()
+
+doApiCallLength :: TestM ()
+doApiCallLength = do
+  s <- asks _testData_strVar
+  !res <- lift $ valToNumber =<< s ^. js ("length" :: JSString)
+  pure ()
+
+doGetPropBool :: TestM ()
+doGetPropBool = do
+  o <- asks _testData_objVar
+  !res <- lift $ valToBool =<< o ^. js ("boolean_val" :: JSString)
+  pure ()
+
+doGetPropNumber :: TestM ()
+doGetPropNumber = do
+  o <- asks _testData_objVar
+  !res <- lift $ valToNumber =<< o ^. js ("number_val" :: JSString)
+  pure ()
+
+doGetPropText :: TestM ()
+doGetPropText = do
+  o <- asks _testData_objVar
+  !res <- lift $ valToText =<< o ^. js ("string_val" :: JSString)
+  pure ()
+
+doSetPropBool :: TestM ()
+doSetPropBool = do
+  o <- asks _testData_objVar
+  lift $ (o <# ("boolean_val" :: JSString)) False
+  pure ()
+
+doSetPropNumber :: TestM ()
+doSetPropNumber = do
+  o <- asks _testData_objVar
+  lift $ (o <# ("number_val" :: JSString)) (5.5 :: Double)
+  pure ()
+
+doSetPropText :: TestM ()
+doSetPropText = do
+  o <- asks _testData_objVar
+  lift $ (o <# ("string_val" :: JSString)) ("new string" :: JSString)
+  pure ()
+
+doGetSetPropBool :: TestM ()
+doGetSetPropBool = do
+  o <- asks _testData_objVar
+  lift $ do
+    b <- valToBool =<< o ^. js ("boolean_val" :: JSString)
+    (o <# ("boolean_val" :: JSString)) (not b)
+  pure ()
+
+doGetSetPropNumber :: TestM ()
+doGetSetPropNumber = do
+  o <- asks _testData_objVar
+  lift $ do
+    n <- valToNumber =<< o ^. js ("number_val" :: JSString)
+    (o <# ("number_val" :: JSString)) (n + 0.1 :: Double)
+  pure ()
+
+doGetSetPropText :: TestM ()
+doGetSetPropText = do
+  o <- asks _testData_objVar
+  lift $ do
+    v <- valToText =<< o ^. js ("string_val" :: JSString)
+    (o <# ("string_val" :: JSString)) ("a" <> T.drop 1 v)
   pure ()
