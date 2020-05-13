@@ -1,4 +1,18 @@
 WIP: BMs to get jsaddle (warp, webgtk, etc) performance
+------------------------------
+
+Hack
+----
+
+```
+nix-shell -A master;
+cabal configure; cabal run
+```
+
+```
+nix-shell -A exp-core;
+cabal configure; cabal run
+```
 
 With current jsaddle 0.9.7.0
 ----------------------------
