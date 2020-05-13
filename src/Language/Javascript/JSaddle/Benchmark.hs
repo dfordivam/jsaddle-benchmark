@@ -40,7 +40,7 @@ putResultsInDom results = do
   let
     innerHTML :: Text
     innerHTML = table $ ([ rowHeader ] <>) $
-      (flip map) results $ \(desc, t) -> row [td desc, td (T.pack $ show t)]
+      (flip map) results $ \(desc, t) -> row [td desc, td (T.pack $ init $ show t)]
     table :: [Text] -> Text
     table c = "<table>" <> mconcat c <> "</table>"
     row :: [Text] -> Text
