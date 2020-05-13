@@ -85,6 +85,7 @@ measureElapsedTime :: (MonadJSM m) => Int -> m a -> m (NominalDiffTime)
 measureElapsedTime c f = do
   startTime <- liftIO $ getCurrentTime
   replicateM_ c f
+  liftJSM $ syncPoint
   endTime <- liftIO $ getCurrentTime
   pure $ diffUTCTime endTime startTime
 
