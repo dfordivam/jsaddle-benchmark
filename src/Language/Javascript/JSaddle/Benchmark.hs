@@ -28,19 +28,28 @@ runBMs = do
   !testData <- makeTestData
   results <- runReaderT (runTestAndGatherResult 1000) testData
   putResultsInDom results
-  liftIO $ for_ results $ \(desc, t) -> do
-    putStrLn $ (T.unpack desc) <> "\t\t" <> show t
+  liftIO $ printResults results
   -- results <- runReaderT (measureElapsedTime 1000 doSetPropNumber) testData
   -- b <- valToBool =<< (_testData_objVar testData) ^. js ("boolean_val" :: JSString)
   -- liftIO $ print b
   -- liftIO $ print results
 
+printResults :: BMResults -> IO ()
+printResults results = do
+  putStrLn $ "| Description | Time (in sec) |"
+  putStrLn $ "| ----------- | ------------- |"
+  for_ results $ \(desc, t) -> do
+    putStrLn $ "| " <> (T.unpack desc) <> " | " <> (init $ show t) <> " |"
+
 putResultsInDom :: BMResults -> JSM ()
 putResultsInDom results = do
   let
     innerHTML :: Text
-    innerHTML = table $ ([ rowHeader ] <>) $
+    innerHTML = tableWithDesc <> tableOnlyNumbers
+    tableWithDesc = table $ ([ rowHeader ] <>) $
       (flip map) results $ \(desc, t) -> row [td desc, td (T.pack $ init $ show t)]
+    tableOnlyNumbers = table $ ([ "<th>Time</th>" ] <>) $
+      (flip map) results $ \(desc, t) -> row [td (T.pack $ init $ show t)]
     table :: [Text] -> Text
     table c = "<table>" <> mconcat c <> "</table>"
     row :: [Text] -> Text
