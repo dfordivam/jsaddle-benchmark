@@ -20,6 +20,9 @@ data TestData = TestData
   , _testData_numberVar :: !JSVal
   , _testData_strVar :: !JSVal
   , _testData_objVar :: !JSVal
+  , _testData_boolVar2 :: !JSVal
+  , _testData_numberVar2 :: !JSVal
+  , _testData_strVar2 :: !JSVal
   , _testData_objVar2 :: !JSVal
   }
 
@@ -72,7 +75,8 @@ runTestAndGatherResult c = do
       <> toJSValTests
       <> makeObjectTests
       <> makeArrayTests
-      <> getSetProp
+      <> getSetPropTests
+      <> strictEqualTests
       <> apiCallTests
 
 measureElapsedTime :: (MonadJSM m) => Int -> m a -> m (NominalDiffTime)
@@ -112,7 +116,7 @@ makeArrayTests =
   , (doMakeArrayAndProperties, "array + properties")
   ]
 
-getSetProp =
+getSetPropTests =
   [ (doGetPropBool, "getProp bool")
   , (doGetPropNumber, "getProp number")
   , (doGetPropText, "getProp text")
@@ -125,6 +129,13 @@ getSetProp =
   , (doGetModifySetPropBool, "getProp, modify, setProp bool")
   , (doGetModifySetPropNumber, "getProp, modify, setProp number")
   , (doGetModifySetPropText, "getProp, modify, setProp text")
+  ]
+
+strictEqualTests =
+  [ (doStrictEqualBool, "strictEqual bool")
+  , (doStrictEqualNumber, "strictEqual number")
+  , (doStrictEqualString, "strictEqual string")
+  , (doStrictEqualObj, "strictEqual object")
   ]
 
 apiCallTests =
@@ -142,13 +153,16 @@ makeTestData = do
     (o <# ("number_val" :: String)) n
     (o <# ("string_val" :: String)) s
     toJSVal o
+  !b2 <- toJSVal False
+  !n2 <- toJSVal (4.56 :: Double)
+  !s2 <- toJSVal ("another string" :: String)
   !o2 <- do
     o <- create
     (o <# ("boolean_val" :: String)) b
     (o <# ("number_val" :: String)) n
     (o <# ("string_val" :: String)) s
     toJSVal o
-  pure $ TestData b n s o o2
+  pure $ TestData b n s o b2 n2 s2 o2
 
 doValToBool :: TestM ()
 doValToBool = do
@@ -345,4 +359,32 @@ doGetModifySetPropText = do
   lift $ do
     v <- valToText =<< o ^. js ("string_val" :: JSString)
     (o <# ("string_val" :: JSString)) ("a" <> T.drop 1 v)
+  pure ()
+
+doStrictEqualBool :: TestM ()
+doStrictEqualBool = do
+  b <- asks _testData_boolVar
+  b2 <- asks _testData_boolVar2
+  !res <- lift $ strictEqual b b2
+  pure ()
+
+doStrictEqualNumber :: TestM ()
+doStrictEqualNumber = do
+  n <- asks _testData_numberVar
+  n2 <- asks _testData_numberVar2
+  !res <- lift $ strictEqual n n2
+  pure ()
+
+doStrictEqualString :: TestM ()
+doStrictEqualString = do
+  s <- asks _testData_strVar
+  s2 <- asks _testData_strVar2
+  !res <- lift $ strictEqual s s2
+  pure ()
+
+doStrictEqualObj :: TestM ()
+doStrictEqualObj = do
+  o <- asks _testData_objVar
+  o2 <- asks _testData_objVar2
+  !res <- lift $ strictEqual o o2
   pure ()
