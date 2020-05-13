@@ -20,7 +20,9 @@ data TestData = TestData
   , _testData_numberVar :: !JSVal
   , _testData_strVar :: !JSVal
   , _testData_objVar :: !JSVal
+  , _testData_objVar2 :: !JSVal
   }
+
 type BMResults = [(Text, NominalDiffTime)]
 
 runBMs :: JSM ()
@@ -120,6 +122,9 @@ getSetProp =
   , (doGetSetPropBool, "getProp + setProp bool")
   , (doGetSetPropNumber, "getProp + setProp number")
   , (doGetSetPropText, "getProp + setProp text")
+  , (doGetModifySetPropBool, "getProp, modify, setProp bool")
+  , (doGetModifySetPropNumber, "getProp, modify, setProp number")
+  , (doGetModifySetPropText, "getProp, modify, setProp text")
   ]
 
 apiCallTests =
@@ -137,7 +142,13 @@ makeTestData = do
     (o <# ("number_val" :: String)) n
     (o <# ("string_val" :: String)) s
     toJSVal o
-  pure $ TestData b n s o
+  !o2 <- do
+    o <- create
+    (o <# ("boolean_val" :: String)) b
+    (o <# ("number_val" :: String)) n
+    (o <# ("string_val" :: String)) s
+    toJSVal o
+  pure $ TestData b n s o o2
 
 doValToBool :: TestM ()
 doValToBool = do
@@ -291,21 +302,45 @@ doSetPropText = do
 doGetSetPropBool :: TestM ()
 doGetSetPropBool = do
   o <- asks _testData_objVar
+  o2 <- asks _testData_objVar2
+  lift $ do
+    (o2 <# ("boolean_val" :: JSString)) =<< o ^. js ("boolean_val" :: JSString)
+  pure ()
+
+doGetSetPropNumber :: TestM ()
+doGetSetPropNumber = do
+  o <- asks _testData_objVar
+  o2 <- asks _testData_objVar2
+  lift $ do
+    (o2 <# ("number_val" :: JSString)) =<< o ^. js ("number_val" :: JSString)
+  pure ()
+
+doGetSetPropText :: TestM ()
+doGetSetPropText = do
+  o <- asks _testData_objVar
+  o2 <- asks _testData_objVar2
+  lift $ do
+    (o2 <# ("string_val" :: JSString)) =<< o ^. js ("string_val" :: JSString)
+  pure ()
+
+doGetModifySetPropBool :: TestM ()
+doGetModifySetPropBool = do
+  o <- asks _testData_objVar
   lift $ do
     b <- valToBool =<< o ^. js ("boolean_val" :: JSString)
     (o <# ("boolean_val" :: JSString)) (not b)
   pure ()
 
-doGetSetPropNumber :: TestM ()
-doGetSetPropNumber = do
+doGetModifySetPropNumber :: TestM ()
+doGetModifySetPropNumber = do
   o <- asks _testData_objVar
   lift $ do
     n <- valToNumber =<< o ^. js ("number_val" :: JSString)
     (o <# ("number_val" :: JSString)) (n + 0.1 :: Double)
   pure ()
 
-doGetSetPropText :: TestM ()
-doGetSetPropText = do
+doGetModifySetPropText :: TestM ()
+doGetModifySetPropText = do
   o <- asks _testData_objVar
   lift $ do
     v <- valToText =<< o ^. js ("string_val" :: JSString)
