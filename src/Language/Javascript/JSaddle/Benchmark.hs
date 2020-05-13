@@ -7,6 +7,7 @@ module Language.Javascript.JSaddle.Benchmark where
 import Control.Lens
 import Control.Monad.Reader
 import Data.Foldable
+import Data.Maybe
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time
@@ -28,10 +29,24 @@ data TestData = TestData
 
 type BMResults = [(Text, NominalDiffTime)]
 
-runBMs :: JSM ()
-runBMs = do
+-- Optionally specify the count
+-- and bm to run
+runBMs :: Maybe Int -> Maybe String -> JSM ()
+runBMs mCount mBmName = do
   !testData <- makeTestData
-  results <- runReaderT (runTestAndGatherResult 1000) testData
+  let
+    count = fromMaybe 1000 mCount
+    allTests = valToTests
+      <> toJSValTests
+      <> makeObjectTests
+      <> makeArrayTests
+      <> getSetPropTests
+      <> strictEqualTests
+      <> apiCallTests
+    testsToRun = maybe allTests (\prefix -> filter (\(_, desc) -> T.isPrefixOf (T.pack prefix) desc) allTests) mBmName
+    runTests = for testsToRun $ \(test, description) -> do
+      (description,) <$> measureElapsedTime count test
+  results <- runReaderT runTests testData
   putResultsInDom results
   liftIO $ printResults results
   -- results <- runReaderT (measureElapsedTime 1000 doSetPropNumber) testData
@@ -65,19 +80,6 @@ putResultsInDom results = do
     rowHeader = "<th>Description</th><th>time (in sec)</th>"
   doc <- jsg ("document" :: JSString)
   doc ^. js ("body" :: JSString) ^. jss ("innerHTML" :: JSString) innerHTML
-
-runTestAndGatherResult :: Int -> TestM BMResults
-runTestAndGatherResult c = do
-  for allTests $ \(test, description) -> do
-    (description,) <$> measureElapsedTime c test
-  where
-    allTests = valToTests
-      <> toJSValTests
-      <> makeObjectTests
-      <> makeArrayTests
-      <> getSetPropTests
-      <> strictEqualTests
-      <> apiCallTests
 
 measureElapsedTime :: (MonadJSM m) => Int -> m a -> m (NominalDiffTime)
 measureElapsedTime c f = do
