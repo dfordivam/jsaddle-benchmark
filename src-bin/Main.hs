@@ -8,7 +8,7 @@ import System.Environment
 main :: IO ()
 main = do
   putStrLn $ "Optional arguments: port count benchmark-prefix"
-  putStrLn $ "Example: jsaddle-benchmark 8000 500 \"getProp + setProp\""
+  putStrLn $ "Example: jsaddle-benchmark 8000 500 \"makeObject only\""
   args <- getArgs
   let (!port, !count, !bm) = case args of
         [] -> (3709, Nothing, Nothing)

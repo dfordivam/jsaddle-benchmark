@@ -107,13 +107,13 @@ toJSValTests =
   ]
 
 makeObjectTests =
-  [ (doMakeObject, "makeObject")
+  [ (doMakeObject, "makeObject only")
   , (doMakeObjectAndGetProp, "makeObject + getProp")
   , (doMakeObjectAndToJSON, "makeObject + valToJSON")
   ]
 
 makeArrayTests =
-  [ (doMakeArray, "array")
+  [ (doMakeArray, "array only")
   , (doMakeArrayAndPropertyNames, "array + propertyNames")
   , (doMakeArrayAndProperties, "array + properties")
   ]
