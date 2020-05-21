@@ -25,6 +25,14 @@ Optionally the port, count and benchmark prefix can be specified
 $(nix-build shell.nix -A exp-core)/bin/jsaddle-benchmark 8000 1 "makeObject only"
 ```
 
+Android app (using reflex)
+==========================
+
+```
+nix-build release.nix -A exp-core-android
+nix-build release.nix -A master-android
+```
+
 With chromium performance comparison
 ----------------------------
 
