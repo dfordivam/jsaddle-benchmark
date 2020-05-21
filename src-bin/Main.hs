@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 module Main where
 
+import Control.Monad.IO.Class
 import Language.Javascript.JSaddle.Benchmark
 import Language.Javascript.JSaddle.Warp
 import System.Environment
@@ -16,4 +17,7 @@ main = do
         (p:count:[]) -> (read p, Just (read count), Nothing)
         (p:count:bm:_) -> (read p, Just (read count), Just bm)
   putStrLn $ "Starting JSaddle Benchmark on port: " <> show port
-  run port $ runBMs count bm
+  run port $ do
+    results <- runBMs count bm
+    putResultsInDom results
+    liftIO $ printResults results

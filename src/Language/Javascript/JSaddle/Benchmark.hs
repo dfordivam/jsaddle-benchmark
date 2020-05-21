@@ -31,9 +31,11 @@ type BMResults = [(Text, NominalDiffTime)]
 
 -- Optionally specify the count
 -- and bm to run
-runBMs :: Maybe Int -> Maybe String -> JSM ()
+runBMs :: Maybe Int -> Maybe String -> JSM (BMResults)
 runBMs mCount mBmName = do
+  liftIO $ putStrLn "Starting runBMs"
   !testData <- makeTestData
+  liftIO $ putStrLn "makeTestData done"
   let
     count = fromMaybe 1000 mCount
     allTests = valToTests
@@ -46,13 +48,7 @@ runBMs mCount mBmName = do
     testsToRun = maybe allTests (\prefix -> filter (\(_, desc) -> T.isPrefixOf (T.pack prefix) desc) allTests) mBmName
     runTests = for testsToRun $ \(test, description) -> do
       (description,) <$> measureElapsedTime count test
-  results <- runReaderT runTests testData
-  putResultsInDom results
-  liftIO $ printResults results
-  -- results <- runReaderT (measureElapsedTime 1000 doSetPropNumber) testData
-  -- b <- valToBool =<< (_testData_objVar testData) ^. js ("boolean_val" :: JSString)
-  -- liftIO $ print b
-  -- liftIO $ print results
+  runReaderT runTests testData
 
 printResults :: BMResults -> IO ()
 printResults results = do
