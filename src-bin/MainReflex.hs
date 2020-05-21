@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Main where
 
 import Control.Monad.IO.Class
@@ -24,17 +25,21 @@ main = mainWidget $ do
   display =<< count ev
   resultEv <- performEvent $ ffor (tag (current ((,) <$> countVal <*> bmName)) ev) $ \(c, n) -> do
     liftJSM $ runBMs (readMay c) (if null n then Nothing else Just n)
-  el "div" $ widgetHold_ (text "Results will be shown below") $ ffor resultEv $ \results -> do
-    el "p" $ el "table" $ do
-      el "th" $ do
-        el "td" $ text "Test name"
-        el "td" $ text "Time (in sec)"
-      for_ results $ \(d, t) -> el "tr" $ do
-        el "td" $ text d
-        el "td" $ text $ T.pack $ (init $ show t)
-    -- Print just time for easier copy-paste
-    el "p" $ el "table" $ do
-      el "th" $ do
-        el "td" $ text "Time (in sec)"
-      for_ results $ \(d, t) -> el "tr" $ do
-        el "td" $ text $ T.pack $ (init $ show t)
+  el "div" $ widgetHold_ (text "Results will be shown below")
+    (makeResultTables <$> resultEv)
+
+makeResultTables :: (DomBuilder t m) => BMResults -> m ()
+makeResultTables results = do
+  el "p" $ el "table" $ do
+    el "th" $ do
+      el "td" $ text "Test name"
+      el "td" $ text "Time (in sec)"
+    for_ (results :: BMResults) $ \(d, t) -> el "tr" $ do
+      el "td" $ text d
+      el "td" $ text $ T.pack $ (init $ show t)
+  -- Print just time for easier copy-paste
+  el "p" $ el "table" $ do
+    el "th" $ do
+      el "td" $ text "Time (in sec)"
+    for_ (results :: BMResults) $ \(_, t) -> el "tr" $ do
+      el "td" $ text $ T.pack $ (init $ show t)
