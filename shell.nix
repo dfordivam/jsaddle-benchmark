@@ -19,8 +19,8 @@ inherit (nixpkgs) pkgs fetchFromGitHub;
   jsaddle-exp-core =  fetchFromGitHub {
     owner = "obsidiansystems";
     repo = "jsaddle";
-    rev = "4f9200959b54a595e197d3a39832f70440c8bee6";
-    sha256 = "1cff22rx4ywd90d27bgklcnli47fk8m9bizqrcad3grfjz3bamvn";
+    rev = "af448aaf4c005e949196c5fb314dc4bdf4fe8519";
+    sha256 = "1ypsfwnz5nxmisxyqvrg681339kq60kl7g4y74dah3vfnmrg3dlw";
   };
 
   using-jsaddle = jsaddle-src: with pkgs.haskell.packages.ghc865; extend (pkgs.lib.composeExtensions (packageSourceOverrides {
