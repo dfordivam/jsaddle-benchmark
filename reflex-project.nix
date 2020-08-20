@@ -8,6 +8,7 @@
 
   shells = {
     ghc = ["jsaddle-benchmark"];
+    ghcjs = ["jsaddle-benchmark"];
   };
 
   overrides = self: super: {
