@@ -1,35 +1,46 @@
-WIP: BMs to get jsaddle (warp, webgtk, etc) performance
-------------------------------
+JSaddle Benchmark Suite
+-----------------------
+
+This repo contains a Benchmark which can be used to test performance of JSaddle's various operations, and some combinations of those.
+
+This has been created to compare different implementations of JSaddle's core logic.
+To see the details of various implementations which have been compared in this repo, see `release.nix`.
+
+This is a simple cabal project which provides two executables
+
+- jsaddle-benchmark - Uses jsaddle-warp, only works on ghc based platforms like linux/MacOS
+
+- jsaddle-benchmark-reflex- Uses reflex-dom, and can be used to test other platforms like ghcjs/android/iOS.
 
 Hack / Run
 ----------
 
-```
-nix-shell -A master;
-cabal configure; cabal run
-```
-```
-$(nix-build shell.nix -A master)/bin/jsaddle-benchmark
-```
-```
-nix-shell -A exp-core;
-cabal configure; cabal run
-```
-```
-$(nix-build shell.nix -A exp-core)/bin/jsaddle-benchmark
-```
+jsaddle-warp app
+================
 
-Optionally the port, count and benchmark prefix can be specified
+Use `shells.ghc` to obtain a shell for a particular version of JSaddle.
 
 ```
-$(nix-build shell.nix -A exp-core)/bin/jsaddle-benchmark 8000 1 "makeObject only"
+nix-shell release.nix -A master-project.shells.ghc;
+cabal configure; cabal run
+```
+
+Or it is possible to run the executables directly
+
+```
+$(nix-build release.nix -A master)/bin/jsaddle-benchmark
+```
+
+Optionally the port, iteration count, and benchmark prefix can be specified
+
+```
+$(nix-build release.nix -A master)/bin/jsaddle-benchmark 8000 1 "makeObject only"
 ```
 
 Android app (using reflex)
 ==========================
 
 ```
-nix-build release.nix -A exp-core-android
 nix-build release.nix -A master-android
 ```
 

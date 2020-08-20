@@ -1,19 +1,59 @@
 let
-  exp-core-reflex-project = (import ./reflex-project.nix {
-      reflex-platform = import ./reflex-platform;
-      appNameSuffix = "_exp_core";
+  nixpkgs = (import ./dep/reflex-platform-master {}).nixpkgs;
+  inherit (nixpkgs.haskell.lib) dontCheck appendPatch overrideCabal;
+
+  master-project = (import ./reflex-project.nix {
+    appNameSuffix = "_master";
   });
-  master-reflex-project = (import ./reflex-project.nix {
-      reflex-platform = import ./reflex-platform-master;
-      appNameSuffix = "_master";
-  });
+
+  mkProject = { jsaddleSrc, appNameSuffix, reflexDomPatches }: import ./reflex-project.nix {
+    inherit appNameSuffix;
+    otherOverrides = (self: super: {
+      jsaddle = self.callCabal2nix "jsaddle" (jsaddleSrc + "/jsaddle") {};
+      jsaddle-warp = if super.jsaddle-warp == null
+        then null
+        else dontCheck (self.callCabal2nix "jsaddle-warp" (jsaddleSrc + "/jsaddle-warp") {});
+      jsaddle-webkit2gtk = if super.jsaddle-webkit2gtk == null
+        then null
+        else self.callCabal2nix "jsaddle-webkit2gtk" (jsaddleSrc + "/jsaddle-webkit2gtk") {};
+      jsaddle-dom = dontCheck (appendPatch super.jsaddle-dom ./dep/jsaddle-dom-fix.patch);
+      reflex-dom-core = dontCheck (super.reflex-dom-core);
+      reflex-dom = dontCheck (overrideCabal super.reflex-dom (drv: {
+        patches = (drv.patches or []) ++ reflexDomPatches;
+      }));
+    });
+  };
+
+  exp-core-project = mkProject {
+    jsaddleSrc = import dep/jsaddle-exp-core2/thunk.nix;
+    appNameSuffix = "_core2";
+    reflexDomPatches = [
+      dep/reflex-dom-fixes-for-experimental-core2-branch.patch
+    ];
+  };
+
+  exp-core-req-batch-project = mkProject {
+    jsaddleSrc = import dep/jsaddle-exp-core2-req-batching/thunk.nix;
+    appNameSuffix = "_core2_req_batch";
+    reflexDomPatches = [
+      dep/reflex-dom-fixes-for-experimental-core2-branch.patch
+      dep/reflex-dom-fix-for-batching-of-requests.patch
+    ];
+  };
+
 in {
-  exp-core = (import ./shell.nix {}).exp-core;
-  master = (import ./shell.nix {}).master;
-  exp-core-android = exp-core-reflex-project.android.jsaddle-benchmark;
-  exp-core-ghc = exp-core-reflex-project.ghc.jsaddle-benchmark;
-  exp-core-ghcjs = exp-core-reflex-project.ghcjs.jsaddle-benchmark;
-  master-android = master-reflex-project.android.jsaddle-benchmark;
-  master-ghc = master-reflex-project.ghc.jsaddle-benchmark;
-  master-ghcjs = master-reflex-project.ghcjs.jsaddle-benchmark;
+  inherit master-project exp-core-project exp-core-req-batch-project;
+
+  # master is reflex-platform's default jsaddle
+  master-android = master-project.android.jsaddle-benchmark;
+  master-ghc = master-project.ghc.jsaddle-benchmark;
+  master-ghcjs = master-project.ghcjs.jsaddle-benchmark;
+
+  # Experimental Core 2
+  exp-core-android = exp-core-project.android.jsaddle-benchmark;
+  exp-core-ghc     = exp-core-project.ghc.jsaddle-benchmark;
+
+  # Experimental Core 2 with request batching
+  exp-core-req-batch-android = exp-core-req-batch-project.android.jsaddle-benchmark;
+  exp-core-req-batch-ghc     = exp-core-req-batch-project.ghc.jsaddle-benchmark;
 }

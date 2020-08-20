@@ -1,9 +1,14 @@
-{ reflex-platform ? import ./reflex-platform,
-  appNameSuffix ? ""
+{ reflex-platform-func ? import ./dep/reflex-platform-master,
+  appNameSuffix ? "",
+  otherOverrides ? (_: _: {})
 } :
-(reflex-platform { config.android_sdk.accept_license = true;}).project ({ pkgs, ... }: {
+let
+  reflex-platform = reflex-platform-func {
+    config.android_sdk.accept_license = true;
+  };
+in reflex-platform.project ({ pkgs, ... }: {
   packages = {
-    jsaddle-benchmark = ./.;
+    jsaddle-benchmark = pkgs.lib.cleanSource ./.;
   };
 
   shells = {
@@ -11,7 +16,7 @@
     ghcjs = ["jsaddle-benchmark"];
   };
 
-  overrides = self: super: {
+  overrides = reflex-platform.nixpkgs.lib.composeExtensions otherOverrides (self: super: {
     jsaddle-benchmark = with pkgs.haskell.lib;
       let
         bm = disableCabalFlag super.jsaddle-benchmark "disable-reflex";
@@ -20,7 +25,7 @@
           self.reflex-dom self.safe
         ];
       });
-  };
+  });
 
   android.jsaddle-benchmark = {
     executableName = "jsaddle-benchmark-reflex";
