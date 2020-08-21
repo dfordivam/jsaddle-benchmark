@@ -46,7 +46,8 @@ runBMs mCount mBmName = do
       <> strictEqualTests
       <> apiCallTests
     testsToRun = maybe allTests (\prefix -> filter (\(_, desc) -> T.isPrefixOf (T.pack prefix) desc) allTests) mBmName
-    runTests = for testsToRun $ \(test, description) -> do
+    testsToRunWithSeq = testsToRun ++ [(sequence_ $ map fst testsToRun, "In Sequence")]
+    runTests = for testsToRunWithSeq $ \(test, description) -> do
       (description,) <$> measureElapsedTime count test
   runReaderT runTests testData
 
