@@ -1,8 +1,8 @@
 {
   "owner": "obsidiansystems",
   "repo": "jsaddle",
-  "branch": "jsaddle-batching",
+  "branch": "request-batching",
   "private": false,
-  "rev": "af448aaf4c005e949196c5fb314dc4bdf4fe8519",
-  "sha256": "1ypsfwnz5nxmisxyqvrg681339kq60kl7g4y74dah3vfnmrg3dlw"
+  "rev": "094d14f05aa3e6351d195deb0a84106d471a3dcd",
+  "sha256": "02gxk4xybhdwcp4svv59bg33ccs2qv638pwq369kcffyryiqv51k"
 }
