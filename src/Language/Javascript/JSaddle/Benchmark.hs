@@ -4,7 +4,9 @@
 
 module Language.Javascript.JSaddle.Benchmark where
 
-import Control.Lens
+import Control.Concurrent
+import Control.Exception
+import Control.Lens hiding ((#))
 import Control.Monad.Reader
 import Data.Foldable
 import Data.Maybe
@@ -36,6 +38,13 @@ runBMs mCount mBmName = do
   liftIO $ putStrLn "Starting runBMs"
   !testData <- makeTestData
   liftIO $ putStrLn "makeTestData done"
+  nestedSyncCallbackTest3Callbacks
+  throwIOInTopFrameBottomBlocked
+  throwIOInTopFrameBottomFinished
+  throwIOInMiddleFrameBottomBlockedTopFinished
+  throwIOInMiddleFrameBottomBlockedTopBlocked
+  -- throwIOInMiddleFrameBottomFinishedTopFinished
+  -- throwIOInBottomFrameMiddleFinishedTopFinished
   let
     count = fromMaybe 1000 mCount
     allTests = valToTests
@@ -50,6 +59,315 @@ runBMs mCount mBmName = do
     runTests = for testsToRunWithSeq $ \(test, description) -> do
       (description,) <$> measureElapsedTime count test
   runReaderT runTests testData
+
+-- Template for GT
+nestedSyncCallbackTest3Callbacks = do
+  mVar1 <- liftIO $ newEmptyMVar
+  mVar2 <- liftIO $ newEmptyMVar
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t =
+        c # ("log" :: String) $ ([t] :: [String])
+  let callback3 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 3"
+        liftIO $ putMVar mVar2 ()
+        consoleLog "written to MVar"
+        liftIO $ takeMVar mVar2
+        consoleLog "callback 3 done"
+        pure ()
+      hsCallback3 = "hsCallback3" :: String
+  (o <# hsCallback3) callback3
+  let callback2 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 2"
+        o # hsCallback3 $ ([] :: [String])
+        liftIO $ do
+          takeMVar mVar2
+          putMVar mVar1 ()
+        consoleLog "written to MVar"
+        liftIO $ do
+          takeMVar mVar1
+          putMVar mVar2 ()
+        consoleLog "callback 2 done"
+        pure ()
+      hsCallback2 = "hsCallback2" :: String
+  (o <# hsCallback2) callback2
+  let callback1 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 1"
+        o # hsCallback2 $ ([] :: [String])
+        consoleLog "waiting for MVar"
+        liftIO $ do
+          takeMVar mVar1
+          putMVar mVar1 ()
+        consoleLog "callback 1 done"
+        pure ()
+  _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
+  pure ()
+
+data MyException = ThisException | ThatException
+    deriving Show
+
+instance Exception MyException
+
+-- Do throwIO in top frame, while the bottom frame is blocked
+throwIOInTopFrameBottomBlocked = do
+  mVar1 <- liftIO $ newEmptyMVar
+  mVar2 <- liftIO $ newEmptyMVar
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t =
+        c # ("log" :: String) $ ([t] :: [String])
+  let callback3 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 3"
+        unsafeInlineLiftIO $ throwIO ThisException
+        pure ()
+      hsCallback3 = "hsCallback3" :: String
+  (o <# hsCallback3) callback3
+  let callback2 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 2"
+        o # hsCallback3 $ ([] :: [String])
+        consoleLog "Blocked on mVar2"
+        liftIO $ do
+          takeMVar mVar2
+        pure ()
+      hsCallback2 = "hsCallback2" :: String
+  (o <# hsCallback2) callback2
+  let callback1 = fun $ \_ _ _ -> do
+        consoleLog "Executing throwIOInTopFrameBottomBlocked"
+        o # hsCallback2 $ ([] :: [String])
+        consoleLog "Blocked on mVar1"
+        liftIO $ do
+          takeMVar mVar1
+        pure ()
+  _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
+  pure ()
+
+-- Do throwIO in top frame, while the bottom frame is finished
+-- The bottom returns Result, does not throw
+throwIOInTopFrameBottomFinished = do
+  mVar1 <- liftIO $ newEmptyMVar
+  mVar2 <- liftIO $ newEmptyMVar
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t =
+        c # ("log" :: String) $ ([t] :: [String])
+  let callback3 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 3"
+        liftIO $ putMVar mVar2 ()
+        consoleLog "waiting for mVar2: callback1 and callback2 to finish"
+        liftIO $ takeMVar mVar2
+        unsafeInlineLiftIO $ throwIO ThisException
+        pure ()
+      hsCallback3 = "hsCallback3" :: String
+  (o <# hsCallback3) callback3
+  let callback2 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 2"
+        o # hsCallback3 $ ([] :: [String])
+        consoleLog "waiting for mVar2"
+        liftIO $ do
+          takeMVar mVar2
+          putMVar mVar1 ()
+        consoleLog "waiting for mVar1: callback1 to finish"
+        liftIO $ do
+          takeMVar mVar1
+          putMVar mVar2 ()
+        consoleLog "callback 2 done"
+        pure ()
+      hsCallback2 = "hsCallback2" :: String
+  (o <# hsCallback2) callback2
+  let callback1 = fun $ \_ _ _ -> do
+        consoleLog "Executing throwIOInTopFrameBottomFinished"
+        o # hsCallback2 $ ([] :: [String])
+        liftIO $ do
+          takeMVar mVar1
+          putMVar mVar1 ()
+        consoleLog "Done callback1"
+        pure ()
+  _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
+  pure ()
+
+throwIOInMiddleFrameBottomBlockedTopFinished = do
+  mVar1 <- liftIO $ newEmptyMVar
+  mVar2 <- liftIO $ newEmptyMVar
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t =
+        c # ("log" :: String) $ ([t] :: [String])
+  let callback3 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 3"
+        liftIO $ putMVar mVar2 ()
+        consoleLog "callback 3 done"
+        pure ()
+      hsCallback3 = "hsCallback3" :: String
+  (o <# hsCallback3) callback3
+  let callback2 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 2"
+        o # hsCallback3 $ ([] :: [String])
+        liftIO $ do
+          takeMVar mVar2
+        liftIO $ throwIO ThisException
+        pure ()
+      hsCallback2 = "hsCallback2" :: String
+  (o <# hsCallback2) callback2
+  let callback1 = fun $ \_ _ _ -> do
+        consoleLog "Executing throwIOInMiddleFrameBottomBlockedTopFinished"
+        o # hsCallback2 $ ([] :: [String])
+        consoleLog "Blocked on mVar1"
+        liftIO $ do
+          takeMVar mVar1
+        pure ()
+  _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
+  pure ()
+
+throwIOInMiddleFrameBottomBlockedTopBlocked = do
+  mVar1 <- liftIO $ newEmptyMVar
+  mVar2 <- liftIO $ newEmptyMVar
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t =
+        c # ("log" :: String) $ ([t] :: [String])
+  let callback3 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 3"
+        liftIO $ putMVar mVar2 ()
+        consoleLog "Blocked on mVar1"
+        liftIO $ do
+          takeMVar mVar1
+        pure ()
+      hsCallback3 = "hsCallback3" :: String
+  (o <# hsCallback3) callback3
+  let callback2 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 2"
+        o # hsCallback3 $ ([] :: [String])
+        liftIO $ do
+          takeMVar mVar2
+        liftIO $ throwIO ThisException
+        pure ()
+      hsCallback2 = "hsCallback2" :: String
+  (o <# hsCallback2) callback2
+  let callback1 = fun $ \_ _ _ -> do
+        consoleLog "Executing throwIOInMiddleFrameBottomBlockedTopBlocked"
+        o # hsCallback2 $ ([] :: [String])
+        consoleLog "Blocked on mVar1"
+        liftIO $ do
+          takeMVar mVar1
+        pure ()
+  _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
+  pure ()
+
+throwIOInMiddleFrameBottomFinishedTopFinished = do
+  mVar1 <- liftIO $ newEmptyMVar
+  mVar2 <- liftIO $ newEmptyMVar
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t =
+        c # ("log" :: String) $ ([t] :: [String])
+  let callback3 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 3"
+        liftIO $ do
+          putMVar mVar1 ()
+        consoleLog "callback 3 done"
+        pure ()
+      hsCallback3 = "hsCallback3" :: String
+  (o <# hsCallback3) callback3
+  let callback2 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 2"
+        o # hsCallback3 $ ([] :: [String])
+        consoleLog "waiting for mVar2"
+        liftIO $ takeMVar mVar2
+        liftIO $ throwIO ThisException
+        pure ()
+      hsCallback2 = "hsCallback2" :: String
+  (o <# hsCallback2) callback2
+  let callback1 = fun $ \_ _ _ -> do
+        consoleLog "Executing throwIOInMiddleFrameBottomFinishedTopFinished"
+        o # hsCallback2 $ ([] :: [String])
+        liftIO $ do
+          takeMVar mVar1
+          putMVar mVar2 ()
+        consoleLog "Done callback1"
+        pure ()
+  _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
+  pure ()
+
+-- Do throwIO in bottom frame
+throwIOInBottomFrameMiddleBlockedTopBlocked = do
+  mVar1 <- liftIO $ newEmptyMVar
+  mVar2 <- liftIO $ newEmptyMVar
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t =
+        c # ("log" :: String) $ ([t] :: [String])
+  let callback3 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 3"
+        liftIO $ do
+          putMVar mVar1 ()
+          takeMVar mVar2
+        consoleLog "callback 3 done"
+        pure ()
+      hsCallback3 = "hsCallback3" :: String
+  (o <# hsCallback3) callback3
+  let callback2 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 2"
+        o # hsCallback3 $ ([] :: [String])
+        liftIO $ takeMVar mVar2
+        consoleLog "callback 2 done"
+        pure ()
+      hsCallback2 = "hsCallback2" :: String
+  (o <# hsCallback2) callback2
+  let callback1 = fun $ \_ _ _ -> do
+        consoleLog "Executing throwIOInBottomFrameMiddleBlockedTopBlocked"
+        o # hsCallback2 $ ([] :: [String])
+        consoleLog "waiting for MVar"
+        liftIO $ do
+          takeMVar mVar1
+        liftIO $ throwIO ThisException
+        pure ()
+  _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
+  pure ()
+
+throwIOInBottomFrameMiddleFinishedTopFinished = do
+  mVar1 <- liftIO $ newEmptyMVar
+  mVar2 <- liftIO $ newEmptyMVar
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t =
+        c # ("log" :: String) $ ([t] :: [String])
+  let callback3 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 3"
+        consoleLog "callback 3 done"
+        liftIO $ putMVar mVar1 ()
+        pure ()
+      hsCallback3 = "hsCallback3" :: String
+  (o <# hsCallback3) callback3
+  let callback2 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 2"
+        o # hsCallback3 $ ([] :: [String])
+        consoleLog "callback 2 done"
+        liftIO $ putMVar mVar2 ()
+        pure ()
+      hsCallback2 = "hsCallback2" :: String
+  (o <# hsCallback2) callback2
+  let callback1 = fun $ \_ _ _ -> do
+        consoleLog "Executing throwIOInBottomFrameMiddleFinishedTopFinished"
+        o # hsCallback2 $ ([] :: [String])
+        consoleLog "waiting for mVar1 and mVar2"
+        liftIO $ do
+          takeMVar mVar1
+          takeMVar mVar2
+        liftIO $ do
+          threadDelay 1000
+        consoleLog "Doing exception"
+        liftIO $ throwIO ThisException
+        pure ()
+  _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
+  pure ()
 
 printResults :: BMResults -> IO ()
 printResults results = do
