@@ -7,6 +7,7 @@ module Language.Javascript.JSaddle.Benchmark where
 import Control.Concurrent
 import Control.Exception
 import Control.Lens hiding ((#))
+import Control.Monad.Except
 import Control.Monad.Reader
 import Data.Foldable
 import Data.Maybe
@@ -67,7 +68,7 @@ nestedSyncCallbackTest3Callbacks = do
   w <- jsg ("window" :: String)
   o <- create
   c <- jsg ("console" :: String)
-  let consoleLog t =
+  let consoleLog t = void $
         c # ("log" :: String) $ ([t] :: [String])
   let callback3 = fun $ \_ _ _ -> do
         consoleLog "Executing callback 3"
@@ -116,7 +117,7 @@ throwIOInTopFrameBottomBlocked = do
   w <- jsg ("window" :: String)
   o <- create
   c <- jsg ("console" :: String)
-  let consoleLog t =
+  let consoleLog t = void $
         c # ("log" :: String) $ ([t] :: [String])
   let callback3 = fun $ \_ _ _ -> do
         consoleLog "Executing callback 3"
@@ -151,11 +152,10 @@ throwIOInTopFrameBottomFinished = do
   w <- jsg ("window" :: String)
   o <- create
   c <- jsg ("console" :: String)
-  let consoleLog t =
+  let consoleLog t = void $
         c # ("log" :: String) $ ([t] :: [String])
   let callback3 = fun $ \_ _ _ -> do
         consoleLog "Executing callback 3"
-        liftIO $ putMVar mVar2 ()
         consoleLog "waiting for mVar2: callback1 and callback2 to finish"
         liftIO $ takeMVar mVar2
         unsafeInlineLiftIO $ throwIO ThisException
@@ -166,9 +166,6 @@ throwIOInTopFrameBottomFinished = do
         consoleLog "Executing callback 2"
         o # hsCallback3 $ ([] :: [String])
         consoleLog "waiting for mVar2"
-        liftIO $ do
-          takeMVar mVar2
-          putMVar mVar1 ()
         consoleLog "waiting for mVar1: callback1 to finish"
         liftIO $ do
           takeMVar mVar1
@@ -181,7 +178,6 @@ throwIOInTopFrameBottomFinished = do
         consoleLog "Executing throwIOInTopFrameBottomFinished"
         o # hsCallback2 $ ([] :: [String])
         liftIO $ do
-          takeMVar mVar1
           putMVar mVar1 ()
         consoleLog "Done callback1"
         pure ()
@@ -194,7 +190,7 @@ throwIOInMiddleFrameBottomBlockedTopFinished = do
   w <- jsg ("window" :: String)
   o <- create
   c <- jsg ("console" :: String)
-  let consoleLog t =
+  let consoleLog t = void $
         c # ("log" :: String) $ ([t] :: [String])
   let callback3 = fun $ \_ _ _ -> do
         consoleLog "Executing callback 3"
@@ -228,7 +224,7 @@ throwIOInMiddleFrameBottomBlockedTopBlocked = do
   w <- jsg ("window" :: String)
   o <- create
   c <- jsg ("console" :: String)
-  let consoleLog t =
+  let consoleLog t = void $
         c # ("log" :: String) $ ([t] :: [String])
   let callback3 = fun $ \_ _ _ -> do
         consoleLog "Executing callback 3"
@@ -264,7 +260,7 @@ throwIOInMiddleFrameBottomFinishedTopFinished = do
   w <- jsg ("window" :: String)
   o <- create
   c <- jsg ("console" :: String)
-  let consoleLog t =
+  let consoleLog t = void $
         c # ("log" :: String) $ ([t] :: [String])
   let callback3 = fun $ \_ _ _ -> do
         consoleLog "Executing callback 3"
@@ -301,7 +297,7 @@ throwIOInBottomFrameMiddleBlockedTopBlocked = do
   w <- jsg ("window" :: String)
   o <- create
   c <- jsg ("console" :: String)
-  let consoleLog t =
+  let consoleLog t = void $
         c # ("log" :: String) $ ([t] :: [String])
   let callback3 = fun $ \_ _ _ -> do
         consoleLog "Executing callback 3"
@@ -337,7 +333,7 @@ throwIOInBottomFrameMiddleFinishedTopFinished = do
   w <- jsg ("window" :: String)
   o <- create
   c <- jsg ("console" :: String)
-  let consoleLog t =
+  let consoleLog t = void $
         c # ("log" :: String) $ ([t] :: [String])
   let callback3 = fun $ \_ _ _ -> do
         consoleLog "Executing callback 3"
