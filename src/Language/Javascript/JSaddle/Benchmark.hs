@@ -39,12 +39,14 @@ runBMs mCount mBmName = do
   liftIO $ putStrLn "Starting runBMs"
   !testData <- makeTestData
   liftIO $ putStrLn "makeTestData done"
-  nestedSyncCallbackTest3Callbacks
-  throwIOInTopFrameBottomBlocked
-  throwIOInTopFrameBottomFinishedHasCatch
-  throwIOInTopFrameBottomFinished
-  throwIOInMiddleFrameBottomBlockedTopFinished
-  throwIOInMiddleFrameBottomBlockedTopBlocked
+  testCatchErrorOnMain
+  testCatchErrorOnCallback
+  -- nestedSyncCallbackTest3Callbacks
+  -- throwIOInTopFrameBottomBlocked
+  -- throwIOInTopFrameBottomFinishedHasCatch
+  -- throwIOInTopFrameBottomFinished
+  -- throwIOInMiddleFrameBottomBlockedTopFinished
+  -- throwIOInMiddleFrameBottomBlockedTopBlocked
   -- throwIOInMiddleFrameBottomFinishedTopFinished
   -- throwIOInBottomFrameMiddleFinishedTopFinished
   let
@@ -61,6 +63,51 @@ runBMs mCount mBmName = do
     runTests = for testsToRunWithSeq $ \(test, description) -> do
       (description,) <$> measureElapsedTime count test
   runReaderT runTests testData
+
+testCatchErrorOnMain = do
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t = void $
+        c # ("log" :: String) $ ([t] :: [String])
+  let callback1 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 1"
+        liftIO $ threadDelay 100
+        liftIO $ throwIO ThisException
+        consoleLog "callback 1 done"
+      hsCallback1 = "hsCallback1" :: String
+  (o <# hsCallback1) callback1
+
+  liftIO $ putStrLn "Starting test"
+  (do
+      o # hsCallback1 $ ([] :: [String])
+      pure ()
+    ) `catchError` (\_ -> consoleLog "caught callback1 exception")
+  pure ()
+
+testCatchErrorOnCallback = do
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t = void $
+        c # ("log" :: String) $ ([t] :: [String])
+  let callback2 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 2"
+        liftIO $ threadDelay 100
+        liftIO $ throwIO ThisException
+        pure ()
+      hsCallback2 = "hsCallback2" :: String
+  (o <# hsCallback2) callback2
+  let callback1 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 1"
+        (do
+            o # hsCallback2 $ ([] :: [String])
+            pure ()
+          ) `catchError` (\_ -> consoleLog "caught callback2 exception")
+        consoleLog "callback 1 done"
+        pure ()
+  _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
+  pure ()
 
 -- Template for GT
 nestedSyncCallbackTest3Callbacks = do
