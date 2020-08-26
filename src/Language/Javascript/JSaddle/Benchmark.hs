@@ -41,6 +41,7 @@ runBMs mCount mBmName = do
   liftIO $ putStrLn "makeTestData done"
   nestedSyncCallbackTest3Callbacks
   throwIOInTopFrameBottomBlocked
+  throwIOInTopFrameBottomFinishedHasCatch
   throwIOInTopFrameBottomFinished
   throwIOInMiddleFrameBottomBlockedTopFinished
   throwIOInMiddleFrameBottomBlockedTopBlocked
@@ -179,6 +180,42 @@ throwIOInTopFrameBottomFinished = do
         o # hsCallback2 $ ([] :: [String])
         liftIO $ do
           putMVar mVar1 ()
+        consoleLog "Done callback1"
+        pure ()
+  _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
+  pure ()
+
+throwIOInTopFrameBottomFinishedHasCatch = do
+  mVar1 <- liftIO $ newEmptyMVar
+  mVar2 <- liftIO $ newEmptyMVar
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t = void $
+        c # ("log" :: String) $ ([t] :: [String])
+  let callback3 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 3"
+        unsafeInlineLiftIO $ throwIO ThisException
+        pure ()
+      hsCallback3 = "hsCallback3" :: String
+  (o <# hsCallback3) callback3
+  let callback2 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 2"
+        (do
+            res <- o # hsCallback3 $ ([] :: [String])
+            void $ valToStr res
+          )
+          `catchError` (\_ -> consoleLog "Caught exception from callback 3")
+        pure ()
+      hsCallback2 = "hsCallback2" :: String
+  (o <# hsCallback2) callback2
+  let callback1 = fun $ \_ _ _ -> do
+        consoleLog "Executing throwIOInTopFrameBottomFinishedHasCatch"
+        (do
+            res <- o # hsCallback2 $ ([] :: [String])
+            void $ valToStr res
+          )
+          `catchError` (\_ -> consoleLog "Caught exception from callback 2")
         consoleLog "Done callback1"
         pure ()
   _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
