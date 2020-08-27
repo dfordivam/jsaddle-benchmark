@@ -40,17 +40,18 @@ runBMs mCount mBmName = do
   !testData <- makeTestData
   liftIO $ putStrLn "makeTestData done"
   replicateM 1 $ do
-    -- testCatchErrorOnMain
-    -- testCatchErrorOnCallback
+    testCatchErrorOnMain
+    testCatchErrorOnCallback
     -- nestedSyncCallbackTest3Callbacks
-    syncCallbacksInSequenceTest
-    -- throwIOInTopFrameBottomBlocked
-    -- throwIOInTopFrameBottomFinished
-    -- throwIOInTopFrameBottomHasCatch
-    -- throwIOInMiddleFrameBottomBlockedTopFinished
-    -- throwIOInMiddleFrameBottomBlockedTopBlocked
-    -- throwIOInMiddleFrameBottomFinishedTopFinished
-    -- throwIOInBottomFrameMiddleFinishedTopFinished
+    syncCallbacksInSequenceBlockedTest
+    syncCallbacksInSequenceNonBlockedTest
+    throwIOInTopFrameBottomBlocked
+    throwIOInTopFrameBottomFinished
+    throwIOInTopFrameBottomHasCatch
+    throwIOInMiddleFrameBottomBlockedTopFinished
+    throwIOInMiddleFrameBottomBlockedTopBlocked
+    throwIOInMiddleFrameBottomFinishedTopFinished
+    throwIOInBottomFrameMiddleFinishedTopFinished
   let
     count = fromMaybe 1000 mCount
     allTests = valToTests
@@ -152,7 +153,7 @@ nestedSyncCallbackTest3Callbacks = do
   _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
   pure ()
 
-syncCallbacksInSequenceTest = do
+syncCallbacksInSequenceBlockedTest = do
   mVar1 <- liftIO $ newEmptyMVar
   mVar2 <- liftIO $ newEmptyMVar
   w <- jsg ("window" :: String)
@@ -172,6 +173,33 @@ syncCallbacksInSequenceTest = do
         consoleLog "Executing callback 1"
         valToStr =<< (o # hsCallback2 $ ([] :: [String]))
         valToStr =<< (o # hsCallback3 $ ([] :: [String]))
+        consoleLog "callback 1 done"
+  _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
+  pure ()
+
+syncCallbacksInSequenceNonBlockedTest = do
+  mVar1 <- liftIO $ newEmptyMVar
+  mVar2 <- liftIO $ newEmptyMVar
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t = void $
+        c # ("log" :: String) $ ([t] :: [String])
+  let callback3 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 3"
+      hsCallback3 = "hsCallback3" :: String
+  (o <# hsCallback3) callback3
+  let callback2 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 2"
+      hsCallback2 = "hsCallback2" :: String
+  (o <# hsCallback2) callback2
+  let callback1 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 1"
+        (do
+          (o # hsCallback2 $ ([] :: [String]))
+          (o # hsCallback3 $ ([] :: [String]))
+          pure ()
+          ) `catchError` (\_ -> pure ())
         consoleLog "callback 1 done"
   _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
   pure ()
