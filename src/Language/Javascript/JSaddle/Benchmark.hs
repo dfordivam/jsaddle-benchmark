@@ -331,9 +331,6 @@ throwIOInMiddleFrameBottomBlockedTopBlocked = do
   let callback3 = fun $ \_ _ _ -> do
         consoleLog "Executing callback 3"
         liftIO $ putMVar mVar2 ()
-        consoleLog "Blocked on mVar1"
-        liftIO $ do
-          takeMVar mVar1
         pure ()
       hsCallback3 = "hsCallback3" :: String
   (o <# hsCallback3) callback3
