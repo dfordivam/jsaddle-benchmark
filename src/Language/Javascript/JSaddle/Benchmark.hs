@@ -228,7 +228,7 @@ syncCallbacksInSequencePassResult = do
   _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
   pure ()
 
-syncCallbacksInSequenceViaJs = do
+syncCallbackViaJs = do
   w <- jsg ("window" :: String)
   o <- create
   c <- jsg ("console" :: String)
@@ -250,7 +250,7 @@ syncCallbacksInSequenceViaJs = do
   _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
   pure ()
 
-syncCallbacksInSequenceViaJsWithCatch = do
+syncCallbackViaJsWithCatch = do
   w <- jsg ("window" :: String)
   o <- create
   c <- jsg ("console" :: String)
@@ -272,7 +272,7 @@ syncCallbacksInSequenceViaJsWithCatch = do
   _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
   pure ()
 
-syncCallbacksInSequenceViaJsThrowInHS = do
+syncCallbackViaJsThrowInHS = do
   w <- jsg ("window" :: String)
   o <- create
   c <- jsg ("console" :: String)
@@ -295,7 +295,7 @@ syncCallbacksInSequenceViaJsThrowInHS = do
   _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
   pure ()
 
-syncCallbacksInSequenceViaJsWithCatchThrowInHS = do
+syncCallbackViaJsWithCatchThrowInHS = do
   w <- jsg ("window" :: String)
   o <- create
   c <- jsg ("console" :: String)
