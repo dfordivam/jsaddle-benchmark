@@ -153,8 +153,6 @@ nestedSyncCallbackTest3Callbacks = do
   pure ()
 
 syncCallbacksInSequenceBlockedTest = do
-  mVar1 <- liftIO $ newEmptyMVar
-  mVar2 <- liftIO $ newEmptyMVar
   w <- jsg ("window" :: String)
   o <- create
   c <- jsg ("console" :: String)
@@ -177,8 +175,6 @@ syncCallbacksInSequenceBlockedTest = do
   pure ()
 
 syncCallbacksInSequenceNonBlockedTest = do
-  mVar1 <- liftIO $ newEmptyMVar
-  mVar2 <- liftIO $ newEmptyMVar
   w <- jsg ("window" :: String)
   o <- create
   c <- jsg ("console" :: String)
