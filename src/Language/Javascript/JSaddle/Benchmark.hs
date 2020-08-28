@@ -81,7 +81,6 @@ testCatchErrorOnMain = do
       hsCallback1 = "hsCallback1" :: String
   (o <# hsCallback1) callback1
 
-  liftIO $ putStrLn "Starting test"
   (do
       o # hsCallback1 $ ([] :: [String])
       pure ()
