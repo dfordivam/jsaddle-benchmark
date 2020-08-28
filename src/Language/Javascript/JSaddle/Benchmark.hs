@@ -346,6 +346,46 @@ throwIOInMiddleOfSeqCallbacksLastBlockingHasCatch = do
         consoleLog "callback 1 done"
   _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
   pure ()
+
+throwIOInCallerOfSeqCallbacks = do
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t = void $
+        c # ("log" :: String) $ ([t] :: [String])
+  let catchAndLog f lbl = f `catchError`
+        (\e -> toJSVal (("Caught exception at " <> lbl) :: String)
+          >>= (\t' -> c # ("log" :: String) $ ([t', e] :: [JSVal]))
+          >> pure ())
+  let callback4 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 4"
+      hsCallback4 = "hsCallback4" :: String
+  (o <# hsCallback4) callback4
+  let callback3 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 3"
+        liftIO $ throwIO ThisException
+        consoleLog "Finish callback 3"
+      hsCallback3 = "hsCallback3" :: String
+  (o <# hsCallback3) callback3
+  let callback2 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 2"
+        liftIO $ threadDelay 100
+        consoleLog "Finish callback 2"
+      hsCallback2 = "hsCallback2" :: String
+  (o <# hsCallback2) callback2
+  let callback1 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 1"
+        (do
+          (o # hsCallback2 $ ([] :: [String]))
+          (o # hsCallback3 $ ([] :: [String]))
+          (o # hsCallback4 $ ([] :: [String]))
+          liftIO $ throwIO ThatException
+          pure ()
+          ) `catchAndLog` "callback 1"
+        consoleLog "callback 1 done"
+  _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
+  pure ()
+
 data MyException = ThisException | ThatException
     deriving Show
 
