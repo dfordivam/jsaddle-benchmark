@@ -199,6 +199,34 @@ syncCallbacksInSequenceNonBlockedTest = do
   _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
   pure ()
 
+-- For this to work properly the JSCallAsFunction need to return result
+syncCallbacksInSequencePassResult = do
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t = void $
+        c # ("log" :: String) $ ([t] :: [String])
+  let callback3 = fun $ \_ _ (v:_) -> do
+        consoleLog "Executing callback 3"
+        c # ("log" :: String) $ ([v])
+        str <- valToStr v
+        liftIO $ putStrLn $ T.unpack $ textFromJSString str
+      hsCallback3 = "hsCallback3" :: String
+  (o <# hsCallback3) callback3
+  let callback2 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 2"
+      hsCallback2 = "hsCallback2" :: String
+  (o <# hsCallback2) callback2
+  let callback1 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 1"
+        (do
+          res <- (o # hsCallback2 $ ([] :: [String]))
+          (o # hsCallback3 $ ([res]))
+          pure ()
+          ) `catchError` (\_ -> pure ())
+        consoleLog "callback 1 done"
+  _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
+  pure ()
 throwIOInMiddleOfSeqCallbacks = do
   w <- jsg ("window" :: String)
   o <- create
