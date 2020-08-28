@@ -204,6 +204,72 @@ syncCallbacksInSequenceNonBlockedTest = do
   _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
   pure ()
 
+throwIOInMiddleOfSeqCallbacks = do
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t = void $
+        c # ("log" :: String) $ ([t] :: [String])
+  let callback4 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 4"
+      hsCallback4 = "hsCallback4" :: String
+  let callback3 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 3"
+        liftIO $ throwIO ThisException
+        consoleLog "Finish callback 3"
+      hsCallback3 = "hsCallback3" :: String
+  (o <# hsCallback3) callback3
+  let callback2 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 2"
+        liftIO $ threadDelay 100
+        consoleLog "Finish callback 2"
+      hsCallback2 = "hsCallback2" :: String
+  (o <# hsCallback2) callback2
+  let callback1 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 1"
+        (do
+          (o # hsCallback2 $ ([] :: [String]))
+          (o # hsCallback3 $ ([] :: [String]))
+          (o # hsCallback4 $ ([] :: [String]))
+          pure ()
+          ) `catchError` (\_ -> consoleLog "Caught exception in callback1")
+        consoleLog "callback 1 done"
+  _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
+  pure ()
+
+jsErrorInMiddleOfSeqCallbacks = do
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t = void $
+        c # ("log" :: String) $ ([t] :: [String])
+  let callback4 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 4"
+      hsCallback4 = "hsCallback4" :: String
+  let callback3 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 3"
+        eval ("someUndefinedAPI();" :: String)
+        consoleLog "Finish callback 3"
+      hsCallback3 = "hsCallback3" :: String
+  (o <# hsCallback3) callback3
+  let callback2 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 2"
+        liftIO $ threadDelay 100
+        consoleLog "Finish callback 2"
+      hsCallback2 = "hsCallback2" :: String
+  (o <# hsCallback2) callback2
+  let callback1 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 1"
+        (do
+          (o # hsCallback2 $ ([] :: [String]))
+          (o # hsCallback3 $ ([] :: [String]))
+          (o # hsCallback4 $ ([] :: [String]))
+          pure ()
+          ) `catchError` (\_ -> consoleLog "Caught exception in callback1")
+        consoleLog "callback 1 done"
+  _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
+  pure ()
+
 data MyException = ThisException | ThatException
     deriving Show
 
