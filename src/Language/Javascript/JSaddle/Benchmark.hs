@@ -227,6 +227,97 @@ syncCallbacksInSequencePassResult = do
         consoleLog "callback 1 done"
   _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
   pure ()
+
+syncCallbacksInSequenceViaJs = do
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t = void $
+        c # ("log" :: String) $ ([t] :: [String])
+  let callback2 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 2"
+      hsCallback2 = "hsCallback2" :: String
+  (o <# hsCallback2) callback2
+  callHsCallback2 <- eval ("(function() { this.hsCallback2(); return 'callHsCallback2-result';})" :: String)
+  let callback1 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 1"
+        (do
+          res <- (call callHsCallback2 o ([] :: [String]))
+          c # ("log" :: String) $ ([res])
+          pure ()
+          ) `catchError` (\_ -> pure ())
+        consoleLog "callback 1 done"
+  _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
+  pure ()
+
+syncCallbacksInSequenceViaJsWithCatch = do
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t = void $
+        c # ("log" :: String) $ ([t] :: [String])
+  let callback2 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 2"
+      hsCallback2 = "hsCallback2" :: String
+  (o <# hsCallback2) callback2
+  callHsCallback2 <- eval ("(function() { this.hsCallback2(); return 'callHsCallback2-result';})" :: String)
+  let callback1 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 1"
+        (do
+          res <- (call callHsCallback2 o ([] :: [String])) `catchError` pure
+          c # ("log" :: String) $ ([res])
+          pure ()
+          ) `catchError` (\_ -> pure ())
+        consoleLog "callback 1 done"
+  _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
+  pure ()
+
+syncCallbacksInSequenceViaJsThrowInHS = do
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t = void $
+        c # ("log" :: String) $ ([t] :: [String])
+  let callback2 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 2"
+        liftIO $ throwIO ThisException
+      hsCallback2 = "hsCallback2" :: String
+  (o <# hsCallback2) callback2
+  callHsCallback2 <- eval ("(function() { this.hsCallback2(); return 'callHsCallback2-result';})" :: String)
+  let callback1 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 1"
+        (do
+          res <- (call callHsCallback2 o ([] :: [String]))
+          c # ("log" :: String) $ ([res])
+          pure ()
+          ) `catchError` (\_ -> pure ())
+        consoleLog "callback 1 done"
+  _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
+  pure ()
+
+syncCallbacksInSequenceViaJsWithCatchThrowInHS = do
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t = void $
+        c # ("log" :: String) $ ([t] :: [String])
+  let callback2 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 2"
+        liftIO $ throwIO ThisException
+      hsCallback2 = "hsCallback2" :: String
+  (o <# hsCallback2) callback2
+  callHsCallback2 <- eval ("(function() { this.hsCallback2(); return 'callHsCallback2-result';})" :: String)
+  let callback1 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 1"
+        (do
+          res <- (call callHsCallback2 o ([] :: [String])) `catchError` pure
+          c # ("log" :: String) $ ([res])
+          pure ()
+          ) `catchError` (\_ -> pure ())
+        consoleLog "callback 1 done"
+  _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
+  pure ()
+
 throwIOInMiddleOfSeqCallbacks = do
   w <- jsg ("window" :: String)
   o <- create
