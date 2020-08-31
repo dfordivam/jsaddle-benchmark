@@ -39,7 +39,11 @@ runBMs mCount mBmName = do
   liftIO $ putStrLn "Starting runBMs"
   !testData <- makeTestData
   liftIO $ putStrLn "makeTestData done"
-  replicateM 1 $ do
+  let catchAndLog f = do
+        c <- jsg ("console" :: String)
+        (void f) `catchError` (\e ->
+           (c # ("log" :: String) $ ([e])) >> pure ())
+  catchAndLog $ replicateM 1 $ do
     testCatchErrorOnMain
     testCatchErrorOnCallback
     -- nestedSyncCallbackTest3Callbacks
