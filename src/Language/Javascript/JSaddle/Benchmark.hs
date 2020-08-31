@@ -49,6 +49,7 @@ runBMs mCount mBmName = do
     testCatchErrorOnCallback
     testCatchErrorOnCallback2
     nestedCatchErrorOnMain
+    nestedCatchErrorOnMain2
     promiseDoingCallback
     promiseDoingCallbackWithException
     nestedSyncCallbackTest3Callbacks
@@ -198,6 +199,26 @@ nestedCatchErrorOnMain = do
         ) `catchError`
         (\e -> consoleLog "Handler 2" >>
            (c # ("log" :: String) $ ([e])) >> pure ())
+    ) `catchError`
+        (\e -> consoleLog "Handler 1" >>
+           (c # ("log" :: String) $ ([e])) >> pure ())
+  pure ()
+
+nestedCatchErrorOnMain2 = do
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t = void $
+        c # ("log" :: String) $ ([t] :: [String])
+      maxLvls = 50
+  let doNested lvl = do
+        (do
+            consoleLog $ "In nested catch: " <> show lvl
+            when (lvl < maxLvls) $ doNested (lvl + 1)
+          ) `catchError` (\e -> consoleLog ("Handler called for : " <> (show lvl)) >> pure ())
+  (do
+      eval ("someUndefinedAPI();" :: String)
+      doNested 1
     ) `catchError`
         (\e -> consoleLog "Handler 1" >>
            (c # ("log" :: String) $ ([e])) >> pure ())
