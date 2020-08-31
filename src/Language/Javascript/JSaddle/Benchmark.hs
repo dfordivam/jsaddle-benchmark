@@ -209,6 +209,35 @@ promiseDoingCallback = do
   res <- (call getPromiseWithHsCallback2 o ([] :: [String]))
   res # ("then" :: String) $ [callback3]
 
+promiseDoingCallbackWithException = do
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t = void $
+        c # ("log" :: String) $ ([t] :: [String])
+
+  let callback3 = fun $ \_ _ (v:_) -> do
+        consoleLog "Executing callback 3"
+        c # ("log" :: String) $ ([v])
+        liftIO . putStrLn . T.unpack . textFromJSString =<< valToStr v
+
+  let callback2 = fun $ \_ _ (f:_) -> do
+        consoleLog "Executing callback 2"
+        liftIO $ throw ThisException
+        call f f (123456 :: Double)
+        consoleLog "Done callback 2"
+      hsCallback2 = "hsCallback2" :: String
+  (o <# hsCallback2) callback2
+  getPromiseWithHsCallback2 <- eval ("(function() {\
+    \return (new Promise ((resolution, rejection) => {\
+    \  try {\
+    \    this.hsCallback2(function(result) { resolution(result);});\
+    \  } catch (e) { rejection (e); }\
+    \}));})" :: String)
+
+  res <- (call getPromiseWithHsCallback2 o ([] :: [String]))
+  res # ("catch" :: String) $ [callback3]
+
 -- Template for GT
 nestedSyncCallbackTest3Callbacks = do
   mVar1 <- liftIO $ newEmptyMVar
