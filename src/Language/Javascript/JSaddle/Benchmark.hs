@@ -45,16 +45,38 @@ runBMs mCount mBmName = do
            (c # ("log" :: String) $ ([e])) >> pure ())
   catchAndLog $ replicateM 1 $ do
     testCatchErrorOnMain
+    testCatchErrorOnMain2
     testCatchErrorOnCallback
-    -- nestedSyncCallbackTest3Callbacks
+    testCatchErrorOnCallback2
+    nestedCatchErrorOnMain
+    promiseDoingCallback
+    promiseDoingCallbackWithException
+    nestedSyncCallbackTest3Callbacks
     syncCallbacksInSequenceBlockedTest
     syncCallbacksInSequenceNonBlockedTest
+    syncCallbacksInSequencePassResult
+    syncCallbackViaJs
+    syncCallbackViaJsWithCatch
+    syncCallbackViaJsThrowInHS
+    syncCallbackViaJsWithCatchThrowInHS
+    syncCallbackViaJsErrorInHs
+    syncCallbacksInSequenceViaJsUseResultInCB
+    syncCallbacksInSequenceViaJsWithCatchUseResultInCB
+    syncCallbacksInSequenceViaJsThrowInHsUseResultInCB
+    syncCallbacksInSequenceViaJsWithCatchThrowInHSUseResultInCB
+    -- syncCallbacksInSequenceViaJsErrorInHsUseResultInCB
+    throwIOInMiddleOfSeqCallbacks
+    jsErrorInMiddleOfSeqCallbacks
+    -- throwIOInMiddleOfSeqCallbacksLastBlocking
+    -- throwIOInMiddleOfSeqCallbacksLastBlockingHasCatch
+    throwIOInCallerOfSeqCallbacks
     throwIOInTopFrameBottomBlocked
     throwIOInTopFrameBottomFinished
     throwIOInTopFrameBottomHasCatch
     throwIOInMiddleFrameBottomBlockedTopFinished
-    throwIOInMiddleFrameBottomBlockedTopBlocked
+    -- throwIOInMiddleFrameBottomBlockedTopBlocked
     throwIOInMiddleFrameBottomFinishedTopFinished
+    -- throwIOInBottomFrameMiddleBlockedTopBlocked
     throwIOInBottomFrameMiddleFinishedTopFinished
   let
     count = fromMaybe 1000 mCount
