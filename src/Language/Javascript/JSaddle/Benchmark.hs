@@ -157,6 +157,26 @@ testCatchErrorOnCallback2 = do
   _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
   pure ()
 
+nestedCatchErrorOnMain = do
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t = void $
+        c # ("log" :: String) $ ([t] :: [String])
+  (do
+      res <- eval ("someUndefinedAPI();" :: String)
+      (do
+        consoleLog "In nested catch"
+        (c # ("log" :: String) $ ([res]))
+        pure ()
+        ) `catchError`
+        (\e -> consoleLog "Handler 2" >>
+           (c # ("log" :: String) $ ([e])) >> pure ())
+    ) `catchError`
+        (\e -> consoleLog "Handler 1" >>
+           (c # ("log" :: String) $ ([e])) >> pure ())
+  pure ()
+
 -- Template for GT
 nestedSyncCallbackTest3Callbacks = do
   mVar1 <- liftIO $ newEmptyMVar
