@@ -78,7 +78,7 @@ testCatchErrorOnMain = do
   let consoleLog t = void $
         c # ("log" :: String) $ ([t] :: [String])
   let callback1 = fun $ \_ _ _ -> do
-        consoleLog "Executing callback 1"
+        consoleLog "Executing testCatchErrorOnMain"
         liftIO $ threadDelay 100
         liftIO $ throwIO ThisException
         consoleLog "callback 1 done"
@@ -100,7 +100,7 @@ testCatchErrorOnMain2 = do
   -- The 'Non-exhaustive patterns in function' exception happens
   -- immediately on starting callback execution
   let callback1 = fun $ \_ _ (v:_) -> do
-        consoleLog "Executing callback 1"
+        consoleLog "Executing testCatchErrorOnMain2"
         valToStr v
         consoleLog "callback 1 done"
       hsCallback1 = "hsCallback1" :: String
@@ -126,7 +126,7 @@ testCatchErrorOnCallback = do
       hsCallback2 = "hsCallback2" :: String
   (o <# hsCallback2) callback2
   let callback1 = fun $ \_ _ _ -> do
-        consoleLog "Executing callback 1"
+        consoleLog "Executing testCatchErrorOnCallback"
         (do
             o # hsCallback2 $ ([] :: [String])
             pure ()
@@ -151,7 +151,7 @@ testCatchErrorOnCallback2 = do
       hsCallback2 = "hsCallback2" :: String
   (o <# hsCallback2) callback2
   let callback1 = fun $ \_ _ _ -> do
-        consoleLog "Executing callback 1"
+        consoleLog "Executing testCatchErrorOnCallback2"
         (do
             o # hsCallback2 $ ([] :: [String])
             pure ()
@@ -294,7 +294,7 @@ syncCallbacksInSequenceBlockedTest = do
       hsCallback2 = "hsCallback2" :: String
   (o <# hsCallback2) callback2
   let callback1 = fun $ \_ _ _ -> do
-        consoleLog "Executing callback 1"
+        consoleLog "Executing syncCallbacksInSequenceBlockedTest"
         valToStr =<< (o # hsCallback2 $ ([] :: [String]))
         valToStr =<< (o # hsCallback3 $ ([] :: [String]))
         consoleLog "callback 1 done"
@@ -316,7 +316,7 @@ syncCallbacksInSequenceNonBlockedTest = do
       hsCallback2 = "hsCallback2" :: String
   (o <# hsCallback2) callback2
   let callback1 = fun $ \_ _ _ -> do
-        consoleLog "Executing callback 1"
+        consoleLog "Executing syncCallbacksInSequenceNonBlockedTest"
         (do
           (o # hsCallback2 $ ([] :: [String]))
           (o # hsCallback3 $ ([] :: [String]))
@@ -345,7 +345,7 @@ syncCallbacksInSequencePassResult = do
       hsCallback2 = "hsCallback2" :: String
   (o <# hsCallback2) callback2
   let callback1 = fun $ \_ _ _ -> do
-        consoleLog "Executing callback 1"
+        consoleLog "Executing syncCallbacksInSequencePassResult"
         (do
           res <- (o # hsCallback2 $ ([] :: [String]))
           (o # hsCallback3 $ ([res]))
@@ -367,7 +367,7 @@ syncCallbackViaJs = do
   (o <# hsCallback2) callback2
   callHsCallback2 <- eval ("(function() { this.hsCallback2(); return 'callHsCallback2-result';})" :: String)
   let callback1 = fun $ \_ _ _ -> do
-        consoleLog "Executing callback 1"
+        consoleLog "Executing syncCallbackViaJs"
         (do
           res <- (call callHsCallback2 o ([] :: [String]))
           c # ("log" :: String) $ ([res])
@@ -389,7 +389,7 @@ syncCallbackViaJsWithCatch = do
   (o <# hsCallback2) callback2
   callHsCallback2 <- eval ("(function() { this.hsCallback2(); return 'callHsCallback2-result';})" :: String)
   let callback1 = fun $ \_ _ _ -> do
-        consoleLog "Executing callback 1"
+        consoleLog "Executing syncCallbackViaJsWithCatch"
         (do
           res <- (call callHsCallback2 o ([] :: [String])) `catchError` pure
           c # ("log" :: String) $ ([res])
@@ -412,7 +412,7 @@ syncCallbackViaJsThrowInHS = do
   (o <# hsCallback2) callback2
   callHsCallback2 <- eval ("(function() { this.hsCallback2(); return 'callHsCallback2-result';})" :: String)
   let callback1 = fun $ \_ _ _ -> do
-        consoleLog "Executing callback 1"
+        consoleLog "Executing syncCallbackViaJsThrowInHS"
         (do
           res <- (call callHsCallback2 o ([] :: [String]))
           c # ("log" :: String) $ ([res])
@@ -435,7 +435,7 @@ syncCallbackViaJsWithCatchThrowInHS = do
   (o <# hsCallback2) callback2
   callHsCallback2 <- eval ("(function() { this.hsCallback2(); return 'callHsCallback2-result';})" :: String)
   let callback1 = fun $ \_ _ _ -> do
-        consoleLog "Executing callback 1"
+        consoleLog "Executing syncCallbackViaJsWithCatchThrowInHS"
         (do
           res <- (call callHsCallback2 o ([] :: [String])) `catchError` pure
           c # ("log" :: String) $ ([res])
@@ -459,7 +459,7 @@ syncCallbackViaJsErrorInHs = do
   (o <# hsCallback2) callback2
   callHsCallback2 <- eval ("(function() { this.hsCallback2(); return 'callHsCallback2-result';})" :: String)
   let callback1 = fun $ \_ _ _ -> do
-        consoleLog "Executing callback 1"
+        consoleLog "Executing syncCallbackViaJsErrorInHs"
         (do
           res <- (call callHsCallback2 o ([] :: [String]))
           c # ("log" :: String) $ ([res])
@@ -487,7 +487,7 @@ syncCallbacksInSequenceViaJsUseResultInCB = do
   (o <# hsCallback2) callback2
   callHsCallback2 <- eval ("(function() { this.hsCallback2(); return 'callHsCallback2-result';})" :: String)
   let callback1 = fun $ \_ _ _ -> do
-        consoleLog "Executing callback 1"
+        consoleLog "Executing syncCallbacksInSequenceViaJsUseResultInCB"
         (do
           res <- (call callHsCallback2 o ([] :: [String]))
           o # hsCallback3 $ ([res])
@@ -515,7 +515,7 @@ syncCallbacksInSequenceViaJsWithCatchUseResultInCB = do
   (o <# hsCallback2) callback2
   callHsCallback2 <- eval ("(function() { this.hsCallback2(); return 'callHsCallback2-result';})" :: String)
   let callback1 = fun $ \_ _ _ -> do
-        consoleLog "Executing callback 1"
+        consoleLog "Executing syncCallbacksInSequenceViaJsWithCatchUseResultInCB"
         (do
           res <- (call callHsCallback2 o ([] :: [String])) `catchError` pure
           o # hsCallback3 $ ([res])
@@ -544,7 +544,7 @@ syncCallbacksInSequenceViaJsThrowInHsUseResultInCB = do
   (o <# hsCallback2) callback2
   callHsCallback2 <- eval ("(function() { this.hsCallback2(); return 'callHsCallback2-result';})" :: String)
   let callback1 = fun $ \_ _ _ -> do
-        consoleLog "Executing callback 1"
+        consoleLog "Executing syncCallbacksInSequenceViaJsThrowInHsUseResultInCB"
         (do
           res <- (call callHsCallback2 o ([] :: [String]))
           o # hsCallback3 $ ([res])
@@ -573,7 +573,7 @@ syncCallbacksInSequenceViaJsWithCatchThrowInHSUseResultInCB = do
   (o <# hsCallback2) callback2
   callHsCallback2 <- eval ("(function() { this.hsCallback2(); return 'callHsCallback2-result';})" :: String)
   let callback1 = fun $ \_ _ _ -> do
-        consoleLog "Executing callback 1"
+        consoleLog "Executing syncCallbacksInSequenceViaJsWithCatchThrowInHSUseResultInCB"
         (do
           res <- (call callHsCallback2 o ([] :: [String])) `catchError` pure
           o # hsCallback3 $ ([res])
@@ -603,7 +603,7 @@ syncCallbacksInSequenceViaJsErrorInHsUseResultInCB = do
   (o <# hsCallback2) callback2
   callHsCallback2 <- eval ("(function() { this.hsCallback2(); return 'callHsCallback2-result';})" :: String)
   let callback1 = fun $ \_ _ _ -> do
-        consoleLog "Executing callback 1"
+        consoleLog "Executing syncCallbacksInSequenceViaJsErrorInHsUseResultInCB"
         (do
           res <- (call callHsCallback2 o ([] :: [String]))
           o # hsCallback3 $ ([res])
@@ -636,7 +636,7 @@ throwIOInMiddleOfSeqCallbacks = do
       hsCallback2 = "hsCallback2" :: String
   (o <# hsCallback2) callback2
   let callback1 = fun $ \_ _ _ -> do
-        consoleLog "Executing callback 1"
+        consoleLog "Executing throwIOInMiddleOfSeqCallbacks"
         (do
           (o # hsCallback2 $ ([] :: [String]))
           (o # hsCallback3 $ ([] :: [String]))
@@ -671,7 +671,7 @@ jsErrorInMiddleOfSeqCallbacks = do
       hsCallback2 = "hsCallback2" :: String
   (o <# hsCallback2) callback2
   let callback1 = fun $ \_ _ _ -> do
-        consoleLog "Executing callback 1"
+        consoleLog "Executing jsErrorInMiddleOfSeqCallbacks"
         (do
           (o # hsCallback2 $ ([] :: [String]))
           (o # hsCallback3 $ ([] :: [String]))
@@ -708,7 +708,7 @@ throwIOInMiddleOfSeqCallbacksLastBlocking = do
       hsCallback2 = "hsCallback2" :: String
   (o <# hsCallback2) callback2
   let callback1 = fun $ \_ _ _ -> do
-        consoleLog "Executing callback 1"
+        consoleLog "Executing throwIOInMiddleOfSeqCallbacksLastBlocking"
         (do
           (o # hsCallback2 $ ([] :: [String]))
           (o # hsCallback3 $ ([] :: [String]))
@@ -745,7 +745,7 @@ throwIOInMiddleOfSeqCallbacksLastBlockingHasCatch = do
       hsCallback2 = "hsCallback2" :: String
   (o <# hsCallback2) callback2
   let callback1 = fun $ \_ _ _ -> do
-        consoleLog "Executing callback 1"
+        consoleLog "Executing throwIOInMiddleOfSeqCallbacksLastBlockingHasCatch"
         (do
           (o # hsCallback2 $ ([] :: [String]))
           (o # hsCallback3 $ ([] :: [String]))
@@ -784,7 +784,7 @@ throwIOInCallerOfSeqCallbacks = do
       hsCallback2 = "hsCallback2" :: String
   (o <# hsCallback2) callback2
   let callback1 = fun $ \_ _ _ -> do
-        consoleLog "Executing callback 1"
+        consoleLog "Executing throwIOInCallerOfSeqCallbacks"
         (do
           (o # hsCallback2 $ ([] :: [String]))
           (o # hsCallback3 $ ([] :: [String]))
