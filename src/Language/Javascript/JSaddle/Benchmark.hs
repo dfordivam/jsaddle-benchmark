@@ -87,6 +87,27 @@ testCatchErrorOnMain = do
     ) `catchError` (\_ -> consoleLog "caught callback1 exception")
   pure ()
 
+testCatchErrorOnMain2 = do
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t = void $
+        c # ("log" :: String) $ ([t] :: [String])
+  -- The 'Non-exhaustive patterns in function' exception happens
+  -- immediately on starting callback execution
+  let callback1 = fun $ \_ _ (v:_) -> do
+        consoleLog "Executing callback 1"
+        valToStr v
+        consoleLog "callback 1 done"
+      hsCallback1 = "hsCallback1" :: String
+  (o <# hsCallback1) callback1
+
+  (do
+      o # hsCallback1 $ ([] :: [String])
+      pure ()
+    ) `catchError` (\_ -> consoleLog "caught callback1 exception")
+  pure ()
+
 testCatchErrorOnCallback = do
   w <- jsg ("window" :: String)
   o <- create
@@ -97,6 +118,31 @@ testCatchErrorOnCallback = do
         consoleLog "Executing callback 2"
         liftIO $ threadDelay 100
         liftIO $ throwIO ThisException
+        pure ()
+      hsCallback2 = "hsCallback2" :: String
+  (o <# hsCallback2) callback2
+  let callback1 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 1"
+        (do
+            o # hsCallback2 $ ([] :: [String])
+            pure ()
+          ) `catchError` (\_ -> consoleLog "caught callback2 exception")
+        consoleLog "callback 1 done"
+        pure ()
+  _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
+  pure ()
+
+testCatchErrorOnCallback2 = do
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t = void $
+        c # ("log" :: String) $ ([t] :: [String])
+  -- The 'Non-exhaustive patterns in function' exception happens
+  -- immediately on starting callback execution
+  let callback2 = fun $ \_ _ (v:_) -> do
+        consoleLog "Executing callback 2"
+        valToStr v
         pure ()
       hsCallback2 = "hsCallback2" :: String
   (o <# hsCallback2) callback2
@@ -318,6 +364,30 @@ syncCallbackViaJsWithCatchThrowInHS = do
   _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
   pure ()
 
+syncCallbackViaJsErrorInHs = do
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t = void $
+        c # ("log" :: String) $ ([t] :: [String])
+  -- The 'Non-exhaustive patterns in function' exception happens
+  -- immediately on starting callback execution
+  let callback2 = fun $ \_ _ (v:_) -> do
+        consoleLog "Executing callback 2"
+      hsCallback2 = "hsCallback2" :: String
+  (o <# hsCallback2) callback2
+  callHsCallback2 <- eval ("(function() { this.hsCallback2(); return 'callHsCallback2-result';})" :: String)
+  let callback1 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 1"
+        (do
+          res <- (call callHsCallback2 o ([] :: [String]))
+          c # ("log" :: String) $ ([res])
+          pure ()
+          ) `catchError` (\_ -> pure ())
+        consoleLog "callback 1 done"
+  _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
+  pure ()
+
 syncCallbacksInSequenceViaJsUseResultInCB = do
   w <- jsg ("window" :: String)
   o <- create
@@ -425,6 +495,36 @@ syncCallbacksInSequenceViaJsWithCatchThrowInHSUseResultInCB = do
         consoleLog "Executing callback 1"
         (do
           res <- (call callHsCallback2 o ([] :: [String])) `catchError` pure
+          o # hsCallback3 $ ([res])
+          pure ()
+          ) `catchError` (\_ -> pure ())
+        consoleLog "callback 1 done"
+  _ <- w ^. js2 ("setTimeout" :: String) callback1 (0 :: Double)
+  pure ()
+
+syncCallbacksInSequenceViaJsErrorInHsUseResultInCB = do
+  w <- jsg ("window" :: String)
+  o <- create
+  c <- jsg ("console" :: String)
+  let consoleLog t = void $
+        c # ("log" :: String) $ ([t] :: [String])
+  let callback3 = fun $ \_ _ (v:_) -> do
+        consoleLog "Executing callback 3"
+        c # ("log" :: String) $ ([v])
+        liftIO . putStrLn . T.unpack . textFromJSString =<< valToStr v
+      hsCallback3 = "hsCallback3" :: String
+  (o <# hsCallback3) callback3
+  -- The 'Non-exhaustive patterns in function' exception happens
+  -- immediately on starting callback execution
+  let callback2 = fun $ \_ _ (v:_) -> do
+        consoleLog "Executing callback 2"
+      hsCallback2 = "hsCallback2" :: String
+  (o <# hsCallback2) callback2
+  callHsCallback2 <- eval ("(function() { this.hsCallback2(); return 'callHsCallback2-result';})" :: String)
+  let callback1 = fun $ \_ _ _ -> do
+        consoleLog "Executing callback 1"
+        (do
+          res <- (call callHsCallback2 o ([] :: [String]))
           o # hsCallback3 $ ([res])
           pure ()
           ) `catchError` (\_ -> pure ())
