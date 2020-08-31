@@ -75,7 +75,7 @@ runBMs mCount mBmName = do
     throwIOInTopFrameBottomFinished
     throwIOInTopFrameBottomHasCatch
     throwIOInMiddleFrameBottomBlockedTopFinished
-    -- throwIOInMiddleFrameBottomBlockedTopBlocked
+    throwIOInMiddleFrameBottomBlockedTopBlocked
     throwIOInMiddleFrameBottomFinishedTopFinished
     -- throwIOInBottomFrameMiddleBlockedTopBlocked
     throwIOInBottomFrameMiddleFinishedTopFinished
