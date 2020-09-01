@@ -249,6 +249,7 @@ promiseDoingCallback = do
     \  } catch (e) { rejection (e); }\
     \}));})" :: String)
 
+  consoleLog "Executing promiseDoingCallback"
   res <- (call getPromiseWithHsCallback2 o ([] :: [String]))
   res # ("then" :: String) $ [callback3]
 
@@ -278,6 +279,7 @@ promiseDoingCallbackWithException = do
     \  } catch (e) { rejection (e); }\
     \}));})" :: String)
 
+  consoleLog "Executing promiseDoingCallbackWithException"
   res <- (call getPromiseWithHsCallback2 o ([] :: [String]))
   res # ("catch" :: String) $ [callback3]
 
