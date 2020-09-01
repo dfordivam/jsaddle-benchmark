@@ -794,7 +794,8 @@ throwIOInMiddleOfSeqCallbacksLastBlockingHasCatch = do
         (do
           (o # hsCallback2 $ ([] :: [String]))
           (o # hsCallback3 $ ([] :: [String]))
-            `catchError` (\e -> consoleLog "Caught exception from callback3" >> pure e)
+            `catchError` (\e -> consoleLog "Caught exception from callback3"
+                           >> (unsafeInlineLiftIO $ putMVar mVar1 ()) >> pure e)
           (o # hsCallback4 $ ([] :: [String]))
           pure ()
           ) `catchError` (\_ -> consoleLog "Caught exception in callback1")
@@ -858,6 +859,8 @@ throwIOInTopFrameBottomBlocked = do
   let callback3 = fun $ \_ _ _ -> do
         consoleLog "Executing callback 3"
         unsafeInlineLiftIO $ throwIO ThisException
+        liftIO $ do
+          putMVar mVar2 ()
         pure ()
       hsCallback3 = "hsCallback3" :: String
   (o <# hsCallback3) callback3
